@@ -1,33 +1,33 @@
 menu "Philips Hue Proximity Control Settings"
     menu "WiFi Settings"
-        config WIFI_SSID
+        config HUE_WIFI_SSID
             string "WiFi SSID"
             default "Example"
         
-        config WIFI_PASSWORD
+        config HUE_WIFI_PASSWORD
             string "WiFi Password"
             default "Password"
         
-        config WIFI_ADVANCED
+        config HUE_WIFI_ADVANCED
             bool "Enable advanced WiFi settings"
             default n
             
-        config WIFI_SET_BSSID
+        config HUE_WIFI_SET_BSSID
             bool "Connect to specific AP by BSSID"
             default n
-            depends on WIFI_ADVANCED
+            depends on HUE_WIFI_ADVANCED
         
-        config WIFI_BSSID
+        config HUE_WIFI_BSSID
             string "AP BSSID"
             default "00:00:00:00:00:00"
             depends on SET_BSSID
             
-        config WIFI_SET_IP
+        config HUE_WIFI_SET_IP
             bool "Connect using static IP"
             default n
-            depends on WIFI_ADVANCED
+            depends on HUE_WIFI_ADVANCED
         
-        config WIFI_IP
+        config HUE_WIFI_IP
             string "Static IP"
             default "0.0.0.0"
             depends on SET_IP
@@ -38,42 +38,49 @@ menu "Philips Hue Proximity Control Settings"
             string "Philips Hue Bridge IP Address"
             default "0.0.0.0"
             help
-                Visit https://discovery.meethue.com/ to get local bridge IP when connected to the same network
+                Visit `discovery.meethue.com<https://discovery.meethue.com/>`_ to get local bridge IP when connected to the
+                same network
         
         config HUE_BRIDGE_ID
             string "Philips Hue Bridge ID"
             default "0000000000000000"
             help
-                Visit https://discovery.meethue.com/ to get local bridge ID when connected to the same network
+                Visit https://discovery.meethue.com/ to get local bridge ID when connected to the
+                same network
         
         config HUE_APP_KEY
             string "Philips Hue Application Key"
             default "0000000000000000000000000000000000000000"
             help
-                Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire application key
+                Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire
+                application key
         
         config HUE_LIGHTS_ON_PATH
             string "Philips Hue path to device or group to turn on"
             default "/smart_scene/[smart scene id]"
             help
-                Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire path and ID
+                Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire
+                path and ID
         
         config HUE_LIGHTS_ON_BODY
             string "Philips Hue HTTPS request body for turning lights on"
             default '{"recall":{"action":"activate"}}'
             help
-                Follow https://developers.meethue.com/develop/hue-api-v2/api-reference for commands to use
+                Follow https://developers.meethue.com/develop/hue-api-v2/api-reference for commands
+                to use
         
         config HUE_LIGHTS_OFF_PATH
             string "Philips Hue path to device or group to turn off"
             default "/grouped_light/[light group id]"
             help
-                Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire path and ID
+                Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire
+                path and ID
         
         config HUE_LIGHTS_OFF_BODY
             string "Philips Hue HTTPS request body for turning lights off"
             default '{"on":{"on":false}}'
             help
-                Follow https://developers.meethue.com/develop/hue-api-v2/api-reference for commands to use
+                Follow https://developers.meethue.com/develop/hue-api-v2/api-reference for commands
+                to use
     endmenu
 endmenu
