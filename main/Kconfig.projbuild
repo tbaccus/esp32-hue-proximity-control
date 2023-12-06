@@ -38,7 +38,7 @@ menu "Philips Hue Proximity Control Settings"
             string "Philips Hue Bridge IP Address"
             default "0.0.0.0"
             help
-                Visit `discovery.meethue.com<https://discovery.meethue.com/>`_ to get local bridge IP when connected to the
+                Visit https://discovery.meethue.com/ to get local bridge IP when connected to the
                 same network
         
         config HUE_BRIDGE_ID
@@ -62,25 +62,11 @@ menu "Philips Hue Proximity Control Settings"
                 Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire
                 path and ID
         
-        config HUE_LIGHTS_ON_BODY
-            string "Philips Hue HTTPS request body for turning lights on"
-            default '{"recall":{"action":"activate"}}'
-            help
-                Follow https://developers.meethue.com/develop/hue-api-v2/api-reference for commands
-                to use
-        
         config HUE_LIGHTS_OFF_PATH
             string "Philips Hue path to device or group to turn off"
             default "/grouped_light/[light group id]"
             help
                 Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire
                 path and ID
-        
-        config HUE_LIGHTS_OFF_BODY
-            string "Philips Hue HTTPS request body for turning lights off"
-            default '{"on":{"on":false}}'
-            help
-                Follow https://developers.meethue.com/develop/hue-api-v2/api-reference for commands
-                to use
     endmenu
 endmenu
