@@ -16,11 +16,19 @@ menu "Philips Hue Proximity Control Settings"
             bool "Connect to specific AP by BSSID"
             default n
             depends on HUE_WIFI_ADVANCED
+            help
+                Enable setting of specific AP BSSID to connect to. Helpful when a specific AP is known to have the most
+                reliable connection. If one or more APs consistently fail on connection attempts, this can help avoid
+                attempting to connect to those APs.
         
         config HUE_WIFI_BSSID
             string "AP BSSID"
             default "00:00:00:00:00:00"
             depends on HUE_WIFI_SET_BSSID
+            help
+                BSSID of specific AP to connect to. Helpful when a specific AP is known to have the most reliable
+                connection. If one or more APs consistently fail on connection attempts, this can help avoid attempting
+                to connect to those APs.
             
         config HUE_WIFI_SET_IP
             bool "Connect using static IP"
@@ -28,9 +36,37 @@ menu "Philips Hue Proximity Control Settings"
             depends on HUE_WIFI_ADVANCED
         
         config HUE_WIFI_IP
-            string "Static IP"
+            string "Static IP address"
             default "0.0.0.0"
             depends on HUE_WIFI_SET_IP
+        
+        config HUE_WIFI_GW
+            string "Gateway address"
+            default "0.0.0.0"
+            depends on HUE_WIFI_SET_IP
+        
+        config HUE_WIFI_NM
+            string "Netmask"
+            default "255.255.255.0"
+            depends on HUE_WIFI_SET_IP
+            
+        config HUE_WIFI_SET_TIMEOUT
+            bool "Enable WiFi timeout period"
+            default n
+            depends on HUE_WIFI_ADVANCED
+            help
+                Enable setting of a maximum period of time that esp will attempt to connect to AP before restarting.
+                Can be helpful with unstable WiFi connections by reducing wait time with failed connection attempts
+                during the association phase.
+        
+        config HUE_WIFI_TIMEOUT
+            int "WiFi timeout period (seconds)"
+            default 10
+            depends on HUE_WIFI_SET_TIMEOUT
+            help
+                Maximum period of time that esp will attempt to connect to AP before restarting. Can be helpful with
+                unstable WiFi connections by reducing wait time with failed connection attempts during the association
+                phase. Default: 10s
     endmenu
 
     menu "Philips Hue Settings"
