@@ -20,7 +20,7 @@ menu "Philips Hue Proximity Control Settings"
         config HUE_WIFI_BSSID
             string "AP BSSID"
             default "00:00:00:00:00:00"
-            depends on SET_BSSID
+            depends on HUE_WIFI_SET_BSSID
             
         config HUE_WIFI_SET_IP
             bool "Connect using static IP"
@@ -30,7 +30,7 @@ menu "Philips Hue Proximity Control Settings"
         config HUE_WIFI_IP
             string "Static IP"
             default "0.0.0.0"
-            depends on SET_IP
+            depends on HUE_WIFI_SET_IP
     endmenu
 
     menu "Philips Hue Settings"
