@@ -1,32 +1,10 @@
 # ESP32 BLE Proximity Sensor for Philips Hue
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
-
-This is the simplest buildable example. The example is used by command `idf.py create-project`
-that copies the project to user specified path and set it's name. For more information follow the [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project)
+ESP-IDF project for automating Philips Hue smart bulbs based on proximity detection. Utilizes HTTPS to send requests  securely to a local Philips Hue Bridge. Proximity detection is achieved by obtaining an average RSSI value for a BLE beacon from a BLE-enabled device (e.g. a smartphone) and using a set RSSI limit to determine if the device is within the set range of the ESP32.
 
 
+## How to use
+A number of settings must be configured through ESP-IDF's `menuconfig` in order to run this project. All required settings are listed under `Philips Hue Proximity Control Settings` as well as some advanced settings. Advanced settings are primarily for improving connection ability to WiFi APs with unstable connections.
 
-## How to use example
-We encourage the users to use the example as a template for the new projects.
-A recommended way is to follow the instructions on a [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project).
-
-## Example folder contents
-
-The project **sample_project** contains one source file in C language [main.c](main/main.c). The file is located in folder [main](main).
-
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt`
-files that provide set of directives and instructions describing the project's source files and targets
-(executable, library, or both). 
-
-Below is short explanation of remaining files in the project folder.
-
-```
-├── CMakeLists.txt
-├── main
-│   ├── CMakeLists.txt
-│   └── main.c
-└── README.md                  This is the file you are currently reading
-```
-Additionally, the sample project contains Makefile and component.mk files, used for the legacy Make based build system. 
-They are not used or needed when building with CMake and idf.py.
+## Why was this developed?
+Currently, Philips Hue supports Smart Scenes which enable the bulbs to change settings based on the time of day but allows very little flexibility for enabling these scenes with physical buttons or app wigets. Philips Hue does, however, provide an API that allows for the enabling of Smart Scenes and more complex control of bulbs with HTTP requests. This project aims to fix the issue that many smart bulbs have of being complicated to turn on and off by allowing this to be automated simply by detecting if a BLE beacon from a device is within a set range of the ESP32, while also making Philips Hue Smart Scenes automatically activate.
