@@ -1,9 +1,12 @@
 # ESP32 BLE Proximity Sensor for Philips Hue
+_Module integration still in progress_
 
 ESP-IDF project for automating Philips Hue smart bulbs based on proximity detection. Utilizes HTTPS to send requests  securely to a local Philips Hue Bridge. Proximity detection is achieved by obtaining an average RSSI value for a BLE beacon from a BLE-enabled device (e.g. a smartphone) and using a set RSSI limit to determine if the device is within the set range of the ESP32.
 
 
 ## How to use
+Currently, this project is under development for integrating all the individual testing modules into a single project and cannot be fully run. Whenever everything is fully integrated, running will require the following:  
+
 A number of settings must be configured through ESP-IDF's `menuconfig` in order to run this project. All required settings are listed under `Philips Hue Proximity Control Settings` as well as some advanced settings. Advanced settings are primarily for improving connection ability to WiFi APs with unstable connections.
 
 ## Why was this developed?
