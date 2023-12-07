@@ -60,7 +60,7 @@ menu "Philips Hue Proximity Control Settings"
                 during the association phase.
         
         config HUE_WIFI_TIMEOUT
-            int "WiFi timeout period (seconds)"
+            int "WiFi timeout period (seconds) [Must be between 1 and 10 seconds]"
             default 10
             depends on HUE_WIFI_SET_TIMEOUT
             help
