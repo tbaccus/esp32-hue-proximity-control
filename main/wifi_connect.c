@@ -15,6 +15,7 @@ static const char* tag = "wifi_connect";
 /* Event base for simplified WiFi connection events */
 ESP_EVENT_DEFINE_BASE(WIFI_CONNECT_EVENT);
 
+#ifdef CONFIG_HUE_WIFI_SET_IP
 /**
  * @brief Converts IP address string to esp_ip4_addr_t value
  *
@@ -27,6 +28,7 @@ ESP_EVENT_DEFINE_BASE(WIFI_CONNECT_EVENT);
  * @retval - @c ESP_ERR_INVALID_ARG – p_output and/or p_ip arguments are NULL
  */
 static esp_err_t strtoip(const char* p_ip, esp_ip4_addr_t* p_output);
+#endif
 
 /**
  * @brief Converts MAC address string to array
@@ -82,6 +84,7 @@ static TimerHandle_t timer_handle = NULL;                        /**< WiFi timeo
 static esp_event_handler_instance_t wifi_event_handler_instance; /**< WIFI_EVENT handler instance */
 static esp_event_handler_instance_t ip_event_handler_instance;   /**< IP_EVENT handler instance */
 
+#ifdef CONFIG_HUE_WIFI_SET_IP
 /**
  * @brief Converts IP address string to esp_ip4_addr_t value
  *
@@ -99,7 +102,7 @@ static esp_err_t strtoip(const char* p_ip, esp_ip4_addr_t* p_output) {
     if (!p_ip) return ESP_ERR_INVALID_ARG;
 
     /* Using uint32_t output as uint8_t array */
-    uint8_t* p_tmp = &(p_output->addr);
+    uint8_t* p_tmp = (uint8_t*)(p_output->addr);
 
     /* Parse IP address string into output with uint8_t array casting */
     if (4 == sscanf(p_ip, "%3hhu.%3hhu.%3hhu.%3hhu", &p_tmp[0], &p_tmp[1], &p_tmp[2], &p_tmp[3])) {
@@ -109,6 +112,7 @@ static esp_err_t strtoip(const char* p_ip, esp_ip4_addr_t* p_output) {
         return ESP_FAIL;
     }
 }
+#endif
 
 /**
  * @brief Converts MAC address string to array
@@ -121,13 +125,13 @@ static esp_err_t strtoip(const char* p_ip, esp_ip4_addr_t* p_output) {
  * @retval - @c ESP_FAIL – Failed to parse input string
  * @retval - @c ESP_ERR_INVALID_ARG – p_output and/or p_mac arguments are NULL
  */
-static esp_err_t strtomac(const char* p_mac, uint8_t a_output[6]) {
+static esp_err_t strtomac(const char* p_mac, uint8_t* a_output) {
     /* Validate input pointers are not NULL */
     if (!a_output) return ESP_ERR_INVALID_ARG;
     if (!p_mac) return ESP_ERR_INVALID_ARG;
 
     /* Parse MAC address string into output array */
-    if (6 == sscanf(p_mac, MACSTR, MAC2STR_PTR(a_output))) {
+    if (6 == sscanf(p_mac, MACSTR_PARSE, MAC2STR_PTR(a_output))) {
         ESP_LOGD(tag, "strtomac returned: " MACSTR, MAC2STR(a_output));
         return ESP_OK;
     } else { /* Fail if sscanf did not recieve string in correct format */
@@ -144,9 +148,11 @@ static esp_err_t strtomac(const char* p_mac, uint8_t a_output[6]) {
  * @param[in] event_data Data sent by event loop
  */
 static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
+    static bool wifi_connected;
     if (event_base == WIFI_EVENT) { /* WiFi Event handlers */
         switch (event_id) {
             case WIFI_EVENT_STA_START: /* WiFi event for starting connection attempt */
+                wifi_connected = false;
                 /* If WiFi timeout is enabled, start timer for connection */
                 if (timer_handle) xTimerStart(timer_handle, 0);
                 ESP_LOGD(tag, "Starting WiFi Phase 4: Connect");
@@ -187,7 +193,7 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
                 ip_event_got_ip_t* event = (ip_event_got_ip_t*)event_data;
 
                 /* If IP changed, post disconnect event for wifi_connect event handling to restart all connections */
-                if (event->ip_changed) {
+                if (event->ip_changed && wifi_connected) {
                     wifi_err_reason_t reason = WIFI_REASON_UNSPECIFIED;
                     ESP_ERROR_CHECK(esp_event_post(WIFI_CONNECT_EVENT, WIFI_CONNECT_EVENT_DISCONNECTED, &reason,
                                                    sizeof(reason), portMAX_DELAY));
@@ -196,6 +202,7 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
                 /* Post connect event for wifi_connect event handling with IP info */
                 ESP_ERROR_CHECK(esp_event_post(WIFI_CONNECT_EVENT, WIFI_CONNECT_EVENT_CONNECTED, &(event->ip_info),
                                                sizeof(event->ip_info), portMAX_DELAY));
+                wifi_connected = true;
                 ESP_LOGI(tag, "Got ip: " IPSTR, IP2STR(&event->ip_info.ip));
                 break;
             default: /* IP events not accounted for */

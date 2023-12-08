@@ -19,6 +19,8 @@ extern "C" {
 /* Modifcation of MAC2STR macro for sscanf */
 #define MAC2STR_PTR(a) &(a)[0], &(a)[1], &(a)[2], &(a)[3], &(a)[4], &(a)[5]
 
+#define MACSTR_PARSE "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx"
+
 /* Event base for simplified WiFi connection events */
 ESP_EVENT_DECLARE_BASE(WIFI_CONNECT_EVENT);
 
