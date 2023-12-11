@@ -3,18 +3,25 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "esp_err.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** @brief Maximum number of characters for JSON buffer */
-#define HUE_JSON_BUFFER_SIZE 256
+#define HUE_JSON_BUFFER_SIZE 256 /**< Maximum number of characters for JSON buffer */
 
-#define HUE_MIN_B_SET 1
-#define HUE_MAX_B_SET 100
-#define HUE_MIN_B_ADD 0
-#define HUE_MAX_B_ADD 100
+/* Brightness setting bounds */
+#define HUE_MIN_B_SET 1   /**< Minimum value for brightness setting */
+#define HUE_MAX_B_SET 100 /**< Maximum value for brightness setting */
+#define HUE_MIN_B_ADD 0   /**< Minimum value for brightness modifying */
+#define HUE_MAX_B_ADD 100 /**< Maximum value for brightness modifying */
+
+/* Color temp setting bounds */
+#define HUE_MIN_CT_SET 153 /**< Minimum value for color temp setting */
+#define HUE_MAX_CT_SET 500 /**< Maximum value for color temp setting */
+#define HUE_MIN_CT_ADD 0   /**< Minimum value for color temp modifying */
+#define HUE_MAX_CT_ADD 347 /**< Maximum value for color temp modifying */
 
 /** @brief Buffer for JSON string creation for set buffer size */
 typedef struct {
@@ -53,7 +60,13 @@ typedef struct {
 
 // TODO: Implement hue_scene_data_t structure
 /** @brief Settings for Philips Hue scene resources */
-/* typedef struct { } hue_scene_data_t; */
+/* typedef struct {
+    const char* id;
+} hue_scene_data_t; */
+
+esp_err_t hue_light_data_to_json(hue_json_buffer_t* json_buffer, hue_light_data_t* hue_data);
+esp_err_t hue_grouped_light_data_to_json(hue_json_buffer_t* json_buffer, hue_grouped_light_data_t* hue_data);
+esp_err_t hue_smart_scene_data_to_json(hue_json_buffer_t* json_buffer, hue_smart_scene_data_t* hue_data);
 
 #ifdef __cplusplus
 }
