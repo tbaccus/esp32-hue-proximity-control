@@ -1,7 +1,0 @@
-cmake_minimum_required(VERSION 3.16)
-set(EXTRA_COMPONENT_DIRS "../components")
-set(TEST_COMPONENTS "hue_json_builder" CACHE STRING "List of components to test")
-set(COMPONENTS "main")
-set(BUILD_DIR "../build")
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(hue_proximity_control_test)

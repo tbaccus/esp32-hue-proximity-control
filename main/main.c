@@ -28,7 +28,7 @@ static const char* tag = "main";
 // }
 
 void app_main(void) {
-    ESP_LOGI(tag, "app_main");
+    ESP_LOGI(tag, "main.c");
     // ESP_ERROR_CHECK(nvs_flash_init());
     // ESP_ERROR_CHECK(esp_phy_erase_cal_data_in_nvs());
     // ESP_ERROR_CHECK(esp_event_loop_create_default());

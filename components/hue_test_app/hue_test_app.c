@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 #include "unity.h"
+#include "hue_test_app.h"
 
-void app_main(void) {
+void run_tests(void) {
     printf("Starting tests\n");
     UNITY_BEGIN();
     unity_run_tests_by_tag("[light]", false);
     UNITY_END();
-    unity_run_menu();
 }

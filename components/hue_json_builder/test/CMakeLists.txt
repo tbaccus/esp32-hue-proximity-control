@@ -1,3 +1,3 @@
 idf_component_register(SRC_DIRS "."
                     INCLUDE_DIRS "."
-                    REQUIRES cmock hue_json_builder)
+                    REQUIRES unity hue_json_builder)
