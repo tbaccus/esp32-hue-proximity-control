@@ -117,7 +117,7 @@ esp_err_t hue_light_data_to_json(hue_json_buffer_t* json_buffer, hue_light_data_
     memset(json_buffer->buff, 0, HUE_JSON_BUFFER_SIZE); /* Clear output buffer, as printing function appends */
 
     /* Prints "on" tag and checks if successful */
-    ret = hue_json_sprintf_and_check(json_buffer, "{\"on\":{\"on\":%s}", HUE_BOOL_STR(hue_data->on));
+    ret = hue_json_sprintf_and_check(json_buffer, "{\"on\":{\"on\":%s}", HUE_BOOL_STR(!(hue_data->off)));
     if (ret != ESP_OK) return ret; /* Return if any error found during printing */
 
     /* Prints "dimming" or "dimming_delta" tags with value clamping and checks if successful */
@@ -217,5 +217,5 @@ esp_err_t hue_smart_scene_data_to_json(hue_json_buffer_t* json_buffer, hue_smart
 
     /* Prints "recall" tag and returns success/failure code */
     return hue_json_sprintf_and_check(json_buffer, "{\"recall\":{\"action\":%s}}",
-                                      hue_data->active ? "activate" : "deactivate");
+                                      hue_data->deactivate ? "deactivate" : "activate");
 }

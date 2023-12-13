@@ -39,7 +39,7 @@ typedef enum {
 /** @brief Settings for Philips Hue light resources */
 typedef struct {
     const char* id;                     /**< Hue resource ID */
-    bool on : 1;                        /**< Light on (true) or off (false) */
+    bool off : 1;                        /**< Light off (true) or on (false) */
     hue_action_t brightness_action : 2; /**< How brightness should be adjusted */
     uint8_t brightness : 7;             /**< [0-100] Amount brightness should be adjusted by or set to */
     hue_action_t color_temp_action : 2; /**< How color temp should be adjusted */
@@ -55,7 +55,7 @@ typedef hue_light_data_t hue_grouped_light_data_t;
 /** @brief Settings for Philips Hue smart scene resources */
 typedef struct {
     const char* id;  /**< Hue resource ID */
-    bool active : 1; /**< Activate (true) or deactivate (false) smart scene */
+    bool deactivate : 1; /**< Dectivate (true) or activate (false) smart scene */
 } hue_smart_scene_data_t;
 
 // TODO: Implement hue_scene_data_t structure
