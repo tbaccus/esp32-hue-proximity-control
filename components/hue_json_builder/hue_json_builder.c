@@ -1,14 +1,15 @@
 #include <string.h>
 #include <stdarg.h>
-#include "esp_err.h"
+
 #include "esp_log.h"
+
 #include "hue_helpers.h"
 #include "hue_json_builder.h"
 
 static const char* tag = "hue_json_builder";
 
 /* TODO: Hue Resource JSON construction
- *  [ ] light
+ *  [x] light
  *       [x] on:{on: bool}
  *       [x] dimming:{brightness: int[1-100]}
  *       [x] dimming_delta:{action: str[up, down, stop],
@@ -71,8 +72,8 @@ static uint16_t hue_clamp(uint16_t value, uint16_t minimum, uint16_t maximum) {
  * @retval - @c ESP_ERR_INVALID_SIZE – Buffer string too short to append to
  */
 static esp_err_t hue_json_sprintf_and_check(hue_json_buffer_t* json_buffer, const char* format, ...) {
-    if (!HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
-    if (!HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
 
     int buff_pos = strlen(json_buffer->buff);
     const uint16_t chars_left = HUE_JSON_BUFFER_SIZE - buff_pos;
@@ -109,9 +110,9 @@ static esp_err_t hue_json_sprintf_and_check(hue_json_buffer_t* json_buffer, cons
  * @note This function will clip values out of range for Hue's API
  */
 esp_err_t hue_light_data_to_json(hue_json_buffer_t* json_buffer, hue_light_data_t* hue_data) {
-    if (!HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
-    if (!HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
-    if (!HUE_NULL_CHECK(tag, hue_data)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, hue_data)) return ESP_ERR_INVALID_ARG;
 
     esp_err_t ret = ESP_OK;                             /* Error code variable for print error checking */
     memset(json_buffer->buff, 0, HUE_JSON_BUFFER_SIZE); /* Clear output buffer, as printing function appends */
@@ -209,9 +210,9 @@ esp_err_t hue_grouped_light_data_to_json(hue_json_buffer_t* json_buffer, hue_gro
  * @retval - @c ESP_ERR_INVALID_SIZE – Buffer is too small for JSON output
  */
 esp_err_t hue_smart_scene_data_to_json(hue_json_buffer_t* json_buffer, hue_smart_scene_data_t* hue_data) {
-    if (!HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
-    if (!HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
-    if (!HUE_NULL_CHECK(tag, hue_data)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, hue_data)) return ESP_ERR_INVALID_ARG;
 
     memset(json_buffer->buff, 0, HUE_JSON_BUFFER_SIZE); /* Clear output buffer, as printing function appends */
 

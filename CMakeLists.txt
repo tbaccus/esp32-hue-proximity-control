@@ -1,11 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/main/test.c")
-    set(COMPONENTS main hue_test_app hue_json_builder)
-    set(TESTS_ALL 1 CACHE UNINITIALIZED "List of components to test")
-    include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-    project(hue_proximity_control_test)
-else()
-    include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-    project(hue_proximity_control)
-endif()
+set(TEST_COMPONENTS hue_json_builder CACHE STRING "List of components to test")
+set(COMPONENTS main $CACHE{TEST_COMPONENTS})
+
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(hue_proximity_control)

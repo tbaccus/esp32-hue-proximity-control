@@ -1,8 +1,7 @@
 #ifndef H_HUE_JSON_BUILDER
 #define H_HUE_JSON_BUILDER
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "esp_types.h"
 #include "esp_err.h"
 
 #ifdef __cplusplus

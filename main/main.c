@@ -1,14 +1,11 @@
-#include <stdio.h>
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_phy_init.h"
 
-#include "wifi_connect.h"
-#include "hue_helpers.h"
-#include "hue_json_builder.h"
+#include "hue_test_app.h"
 
-static const char* tag = "main";
+// static const char* tag = "main";
 
 // static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
 //     if (event_base == WIFI_CONNECT_EVENT) {
@@ -28,7 +25,7 @@ static const char* tag = "main";
 // }
 
 void app_main(void) {
-    ESP_LOGI(tag, "main.c");
+    run_tests();
     // ESP_ERROR_CHECK(nvs_flash_init());
     // ESP_ERROR_CHECK(esp_phy_erase_cal_data_in_nvs());
     // ESP_ERROR_CHECK(esp_event_loop_create_default());

@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
 
@@ -9,39 +11,38 @@
 #include "esp_mac.h"
 
 #include "wifi_connect.h"
+#include "hue_helpers.h"
 
 static const char* tag = "wifi_connect";
 
 /* Event base for simplified WiFi connection events */
 ESP_EVENT_DEFINE_BASE(WIFI_CONNECT_EVENT);
 
-#ifdef CONFIG_HUE_WIFI_SET_IP
 /**
  * @brief Converts IP address string to esp_ip4_addr_t value
  *
- * @param[in]  p_ip     IP address as string
  * @param[out] p_output esp_ip4_addr_t for IP to be stored
+ * @param[in]  p_ip     IP address as string
  *
  * @return ESP error code
  * @retval - @c ESP_OK – Success
  * @retval - @c ESP_FAIL – Failed to parse input string
  * @retval - @c ESP_ERR_INVALID_ARG – p_output and/or p_ip arguments are NULL
  */
-static esp_err_t strtoip(const char* p_ip, esp_ip4_addr_t* p_output);
-#endif
+static esp_err_t strtoip(esp_ip4_addr_t* p_output, const char* p_ip);
 
 /**
  * @brief Converts MAC address string to array
  *
- * @param[in]  p_mac    MAC address as string
  * @param[out] p_output uint8_t array with 6 elements for MAC address to be stored
+ * @param[in]  p_mac    MAC address as string
  *
  * @return ESP error code
  * @retval - @c ESP_OK – Success
  * @retval - @c ESP_FAIL – Failed to parse input string
  * @retval - @c ESP_ERR_INVALID_ARG – p_output and/or p_mac arguments are NULL
  */
-static esp_err_t strtomac(const char* mac, uint8_t* output);
+static esp_err_t strtomac(uint8_t* a_output, const char* p_mac);
 
 /**
  * @brief Event handler for WiFi and IP events
@@ -55,51 +56,52 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
 
 /**
  * @brief Run WiFi/LwIP initialization phase of WiFi connection
+ *
+ * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
  */
-static void wifi_phase_init();
+static void wifi_phase_init(wifi_connect_config_t* wifi_connect_config);
 
 /**
  * @brief Run configuration phase of WiFi connection
+ *
+ * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
  */
-static void wifi_phase_config();
+static void wifi_phase_config(wifi_connect_config_t* wifi_connect_config);
 
-#ifdef CONFIG_HUE_WIFI_SET_IP
 /**
  * @brief Sets IP for station to request from DHCP server based on ESP-IDF config
+ *
  * @param[in,out] sta_netif Pointer to netif instance for station
+ * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
  */
-static void set_static_ip(esp_netif_t* sta_netif);
-#endif
+static void set_static_ip(esp_netif_t* sta_netif, wifi_connect_config_t* wifi_connect_config);
 
-#ifdef WIFI_TIMEOUT_PERIOD
 /**
  * @brief Callback function for WiFi timeout timer to restart esp on timeout
  *
  * @param timer_handle Handle for timer calling the function
  */
 static void wifi_timer_callback(TimerHandle_t timer_handle);
-#endif
 
 static TimerHandle_t timer_handle = NULL;                        /**< WiFi timeout timer handle */
 static esp_event_handler_instance_t wifi_event_handler_instance; /**< WIFI_EVENT handler instance */
 static esp_event_handler_instance_t ip_event_handler_instance;   /**< IP_EVENT handler instance */
 
-#ifdef CONFIG_HUE_WIFI_SET_IP
 /**
  * @brief Converts IP address string to esp_ip4_addr_t value
  *
- * @param[in]  p_ip     IP address as string
  * @param[out] p_output esp_ip4_addr_t for IP to be stored
+ * @param[in]  p_ip     IP address as string
  *
  * @return ESP error code
  * @retval - @c ESP_OK – Success
  * @retval - @c ESP_FAIL – Failed to parse input string
  * @retval - @c ESP_ERR_INVALID_ARG – p_output and/or p_ip arguments are NULL
  */
-static esp_err_t strtoip(const char* p_ip, esp_ip4_addr_t* p_output) {
+static esp_err_t strtoip(esp_ip4_addr_t* p_output, const char* p_ip) {
     /* Validate input pointers are not NULL */
-    if (!p_output) return ESP_ERR_INVALID_ARG;
-    if (!p_ip) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, p_output)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, p_ip)) return ESP_ERR_INVALID_ARG;
 
     /* Using uint32_t output as uint8_t array */
     uint8_t* p_tmp = (uint8_t*)(p_output->addr);
@@ -112,23 +114,22 @@ static esp_err_t strtoip(const char* p_ip, esp_ip4_addr_t* p_output) {
         return ESP_FAIL;
     }
 }
-#endif
 
 /**
  * @brief Converts MAC address string to array
  *
- * @param[in]  p_mac    MAC address as string
  * @param[out] p_output uint8_t array with 6 elements for MAC address to be stored
+ * @param[in]  p_mac    MAC address as string
  *
  * @return ESP error code
  * @retval - @c ESP_OK – Success
  * @retval - @c ESP_FAIL – Failed to parse input string
  * @retval - @c ESP_ERR_INVALID_ARG – p_output and/or p_mac arguments are NULL
  */
-static esp_err_t strtomac(const char* p_mac, uint8_t* a_output) {
+static esp_err_t strtomac(uint8_t* a_output, const char* p_mac) {
     /* Validate input pointers are not NULL */
-    if (!a_output) return ESP_ERR_INVALID_ARG;
-    if (!p_mac) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, a_output)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, p_mac)) return ESP_ERR_INVALID_ARG;
 
     /* Parse MAC address string into output array */
     if (6 == sscanf(p_mac, MACSTR_PARSE, MAC2STR_PTR(a_output))) {
@@ -213,7 +214,6 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
     }
 }
 
-#ifdef WIFI_TIMEOUT_PERIOD
 /**
  * @brief Callback function for WiFi timeout timer to restart esp on timeout
  *
@@ -223,30 +223,34 @@ static void wifi_timer_callback(TimerHandle_t timer_handle) {
     ESP_LOGW(tag, "WiFi connection timed out, restarting to refresh connection...");
     esp_restart();
 }
-#endif
 
-#ifdef CONFIG_HUE_WIFI_SET_IP
 /**
  * @brief Sets IP for station to request from DHCP server based on ESP-IDF config
+ *
  * @param[in,out] sta_netif Pointer to netif instance for station
+ * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
  */
-static void set_static_ip(esp_netif_t* sta_netif) {
-    if (!sta_netif) return;          /* Stop if netif instance does not exist */
-    esp_netif_ip_info_t info = {0};  /* Create empty IP info storage */
-    esp_netif_dhcpc_stop(sta_netif); /* Stops DHCP client if running */
+static void set_static_ip(esp_netif_t* sta_netif, wifi_connect_config_t* wifi_connect_config) {
+    if (HUE_NULL_CHECK(tag, sta_netif)) return;           /* Stop if netif instance does not exist */
+    if (HUE_NULL_CHECK(tag, wifi_connect_config)) return; /* Stop if WiFi config instance does not exist */
+    esp_netif_ip_info_t info = {0};                       /* Create empty IP info storage */
+    esp_netif_dhcpc_stop(sta_netif);                      /* Stops DHCP client if running */
 
-    /* Set IP info from ESP-IDF configs */
-    ESP_ERROR_CHECK(strtoip(CONFIG_HUE_WIFI_IP, info.ip.addr));
-    ESP_ERROR_CHECK(strtoip(CONFIG_HUE_WIFI_GW, info.gw.addr));
-    ESP_ERROR_CHECK(strtoip(CONFIG_HUE_WIFI_NM, info.netmask.addr));
+    /* Set IP info from WiFi Connect config */
+    ESP_ERROR_CHECK(strtoip(&(info.ip), wifi_connect_config->advanced_configs.ip_str));
+    ESP_ERROR_CHECK(strtoip(&(info.gw), wifi_connect_config->advanced_configs.gateway_str));
+    ESP_ERROR_CHECK(strtoip(&(info.netmask), wifi_connect_config->advanced_configs.netmask_str));
     esp_netif_set_ip_info(sta_netif, &info);
 }
-#endif
 
 /**
  * @brief Run WiFi/LwIP initialization phase of WiFi connection
+ *
+ * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
  */
-static void wifi_phase_init() {
+static void wifi_phase_init(wifi_connect_config_t* wifi_connect_config) {
+    if (HUE_NULL_CHECK(tag, wifi_connect_config)) return; /* Stop if WiFi config instance does not exist */
+
     /* Step 1.1: initialize netif */
     ESP_ERROR_CHECK(esp_netif_init());
 
@@ -258,12 +262,12 @@ static void wifi_phase_init() {
                                                         &ip_event_handler_instance));
 
     /* Step 1.3: create default network interface instance */
-#ifdef CONFIG_HUE_WIFI_SET_IP
-    esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
-    set_static_ip(sta_netif);
-#else
-    esp_netif_create_default_wifi_sta();
-#endif
+    /* Use static IP settings if enabled */
+    if (wifi_connect_config->advanced_configs.static_ip_set) {
+        set_static_ip(esp_netif_create_default_wifi_sta(), wifi_connect_config);
+    } else {
+        esp_netif_create_default_wifi_sta();
+    }
 
     /* Step 1.4: create WiFi driver task and initialize driver with esp_wifi_init */
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -272,21 +276,23 @@ static void wifi_phase_init() {
 
 /**
  * @brief Run configuration phase of WiFi connection
+ *
+ * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
  */
-static void wifi_phase_config() {
+static void wifi_phase_config(wifi_connect_config_t* wifi_connect_config) {
     /* WiFi configuration with SSID and Password provided in ESP-IDF config */
-    static wifi_config_t wifi_config = {.sta = {.ssid = CONFIG_HUE_WIFI_SSID,
-                                                .password = CONFIG_HUE_WIFI_PASSWORD,
-                                                .scan_method = WIFI_FAST_SCAN,
-                                                .threshold.authmode = WIFI_AUTH_WPA_PSK,
-                                                .threshold.rssi = -90,
-                                                .bssid_set = CONFIG_HUE_WIFI_SET_BSSID}};
+    static wifi_config_t wifi_config = {
+        .sta = {.scan_method = WIFI_FAST_SCAN, .threshold.authmode = WIFI_AUTH_WPA_PSK, .threshold.rssi = -90}};
 
-    /* Set BSSID of specific AP to connect to if enabled in ESP-IDF config       *
+    memcpy(wifi_config.sta.ssid, wifi_connect_config->ssid, 32);
+    memcpy(wifi_config.sta.password, wifi_connect_config->password, 64);
+
+    /* Set BSSID of specific AP to connect to if enabled                         *
      * Intended to speed up connection if other APs are known to fail more often */
-#ifdef CONFIG_HUE_WIFI_SET_BSSID
-    ESP_ERROR_CHECK(strtomac(CONFIG_HUE_WIFI_BSSID, wifi_config.sta.bssid));
-#endif
+    if (wifi_connect_config->advanced_configs.bssid_set) {
+        wifi_config.sta.bssid_set = true;
+        ESP_ERROR_CHECK(strtomac(wifi_config.sta.bssid, wifi_connect_config->advanced_configs.bssid_str));
+    }
 
     /* Set WiFi to station mode and apply configuration */
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
@@ -341,20 +347,31 @@ void wifi_disconnect() {
 /**
  * @brief Connect to WiFi with settings specified in ESP-IDF configs
  *
+ * @param[in] wifi_config Pointer to WiFi configuration settings
+ *
+ * @return ESP Error code
+ * @retval - @c ESP_OK – WiFi connection process successfully started
+ * @retval - @c ESP_ERR_INVALID_ARG – Configuration argument is NULL
+ *
  * @attention \c WIFI_CONNECT_EVENT events will post to the default event loop for WiFi connection and disconnection and
  *            should be registered with esp_event_handler_instance_register to detect and respond to events
  */
-void wifi_connect() {
+esp_err_t wifi_connect(wifi_connect_config_t* wifi_config) {
+    if (HUE_NULL_CHECK(tag, wifi_config)) return ESP_ERR_INVALID_ARG;
     ESP_LOGI(tag, "WiFi connection process started");
-#ifdef WIFI_TIMEOUT_PERIOD
-    /* WiFi timeout timer for restarting esp if timeout period has passed during connection */
-    timer_handle = xTimerCreate("WiFi timer", WIFI_TIMEOUT_PERIOD, pdFALSE, (void*)0, wifi_timer_callback);
-#endif
+
+    wifi_connect_advanced_config_t* adv_config = &(wifi_config->advanced_configs);
+
+    /* If enabled, setup WiFi timeout timer for restarting esp if timeout period has passed during connection */
+    if (adv_config->timeout_set && (adv_config->timeout_seconds >= 1) && (adv_config->timeout_seconds <= 10)) {
+        timer_handle = xTimerCreate("WiFi timer", pdMS_TO_TICKS(adv_config->timeout_seconds * 1000), pdFALSE, (void*)0,
+                                    wifi_timer_callback);
+    }
 
     ESP_LOGD(tag, "Starting WiFi Phase 1: Initialization");
-    wifi_phase_init(); /* Phase 1 of WiFi connection */
+    wifi_phase_init(wifi_config); /* Phase 1 of WiFi connection */
     ESP_LOGD(tag, "Starting WiFi Phase 2: Configuration");
-    wifi_phase_config(); /* Phase 2 of WiFi connection */
+    wifi_phase_config(wifi_config); /* Phase 2 of WiFi connection */
     ESP_LOGD(tag, "Starting WiFi Phase 3: Start");
     ESP_ERROR_CHECK(esp_wifi_start()); /* Phase 3 of WiFi connection */
     /* Phase 3 posts WIFI_EVENT_STA_START to event_handler to begin Phase 4 */
@@ -364,4 +381,5 @@ void wifi_connect() {
 
     /* Phase 5 of WiFi connection is IP assignment from DHCP server */
     /* Phase 5 posts IP_EVENT_STA_GOT_IP to event_handler once IP is assigned */
+    return ESP_OK;
 }

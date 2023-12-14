@@ -1,5 +1,6 @@
 #include "unity.h"
 #include "unity_test_runner.h"
+
 #include "hue_json_builder.h"
 
 /*======================= Basic NULL testing =======================*/
@@ -29,28 +30,28 @@ TEST_CASE("Set off", "[hue_json_builder][hue_json_light][in_range]") {
 }
 
 /*===================== "dimming" tag testing ======================*/
-TEST_CASE("Brightness set no value", "[hue_json_builder][hue_json_light][hue_json_light__range]][empty]") {
+TEST_CASE("Brightness set no value", "[hue_json_builder][hue_json_light][hue_json_light_range]][empty]") {
     hue_json_buffer_t buffer;
     hue_light_data_t light = {.brightness_action = HUE_ACTION_SET};
     TEST_ASSERT_EQUAL(ESP_OK, hue_light_data_to_json(&buffer, &light));
     TEST_ASSERT_EQUAL_STRING("{\"on\":{\"on\":true},\"dimming\":{\"brightness\":1}}", buffer.buff);
 }
 
-TEST_CASE("Brightness set under range", "[hue_json_builder][hue_json_light][hue_json_light__range]][under_range][out_of_range]") {
+TEST_CASE("Brightness set under range", "[hue_json_builder][hue_json_light][hue_json_light_range]][under_range][out_of_range]") {
     hue_json_buffer_t buffer;
     hue_light_data_t light = {.brightness_action = HUE_ACTION_SET, .brightness = 0};
     TEST_ASSERT_EQUAL(ESP_OK, hue_light_data_to_json(&buffer, &light));
     TEST_ASSERT_EQUAL_STRING("{\"on\":{\"on\":true},\"dimming\":{\"brightness\":1}}", buffer.buff);
 }
 
-TEST_CASE("Brightness set over range", "[hue_json_builder][hue_json_light][hue_json_light__range]][over_range][out_of_range]") {
+TEST_CASE("Brightness set over range", "[hue_json_builder][hue_json_light][hue_json_light_range]][over_range][out_of_range]") {
     hue_json_buffer_t buffer;
     hue_light_data_t light = {.brightness_action = HUE_ACTION_SET, .brightness = 127};
     TEST_ASSERT_EQUAL(ESP_OK, hue_light_data_to_json(&buffer, &light));
     TEST_ASSERT_EQUAL_STRING("{\"on\":{\"on\":true},\"dimming\":{\"brightness\":100}}", buffer.buff);
 }
 
-TEST_CASE("Brightness set in range", "[hue_json_builder][hue_json_light][hue_json_light__range]][in_range]") {
+TEST_CASE("Brightness set in range", "[hue_json_builder][hue_json_light][hue_json_light_range]][in_range]") {
     hue_json_buffer_t buffer;
     hue_light_data_t light = {.brightness_action = HUE_ACTION_SET, .brightness = 23};
     TEST_ASSERT_EQUAL(ESP_OK, hue_light_data_to_json(&buffer, &light));
