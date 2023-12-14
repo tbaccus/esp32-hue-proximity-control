@@ -8,33 +8,11 @@
 
 static const char* tag = "hue_json_builder";
 
-/* TODO: Hue Resource JSON construction
- *  [x] light
- *       [x] on:{on: bool}
- *       [x] dimming:{brightness: int[1-100]}
- *       [x] dimming_delta:{action: str[up, down, stop],
- *                          brightness_delta: int[0-100]}
- *       [x] color_temperature:{mirek: int[153-500]}
- *       [x] color_temperature_delta:{action: str[up, down, stop],
- *                                    mirek_delta: int[0-347]}
- *       [x] color:{xy:{x: float[0-1],
- *                      y: float[0-1]}}
+/* TODO: Hue Scene Resource JSON construction (more testing of request needed to implement properly)
  *  [ ] scene
  *       [ ] recall:{action: str[active, static],
  *                   duration: uint,
  *                   dimming:{brightness: int[1-100]}}
- *  [ ] grouped_light
- *       [x] on:{on: bool}
- *       [x] dimming:{brightness: int[1-100]}
- *       [x] dimming_delta:{action: str[up, down, stop],
- *                          brightness_delta: int[0-100]}
- *       [x] color_temperature:{mirek: int[153-500]}
- *       [x] color_temperature_delta:{action: str[up, down, stop],
- *                                    mirek_delta: int[0-347]}
- *       [x] color:{xy:{x: float[0-1],
- *                      y: float[0-1]}}
- *  [ ] smart_scene
- *       [x] recall:{action: str[activate, deactivate]}
  */
 
 /**
@@ -75,9 +53,13 @@ static esp_err_t hue_json_sprintf_and_check(hue_json_buffer_t* json_buffer, cons
     if (HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
     if (HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
 
+    /* Position used for appending to buffer */
     int buff_pos = strlen(json_buffer->buff);
+
+    /* Maximum number of characters allowed to append to prevent buffer overflow */
     const uint16_t chars_left = HUE_JSON_BUFFER_SIZE - buff_pos;
 
+    /* Pass format and arguments into vsnprintf */
     va_list args;
     va_start(args, format);
     buff_pos = vsnprintf(json_buffer->buff + buff_pos, chars_left, format, args);

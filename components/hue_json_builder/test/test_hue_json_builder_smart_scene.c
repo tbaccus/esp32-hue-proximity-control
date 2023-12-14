@@ -21,7 +21,7 @@ TEST_CASE("Empty smart scene data", "[hue_json_builder][hue_json_smart_scene][em
     TEST_ASSERT_EQUAL_STRING("{\"recall\":{\"action\":\"activate\"}}", buffer.buff);
 }
 
-/*======================== "recall" tag testing ========================*/
+/*====================== "recall" tag testing ======================*/
 TEST_CASE("Deactivate", "[hue_json_builder][hue_json_smart_scene][in_range]") {
     hue_json_buffer_t buffer;
     hue_smart_scene_data_t smart_scene = {.deactivate = true};

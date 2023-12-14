@@ -63,8 +63,50 @@ typedef struct {
     const char* id;
 } hue_scene_data_t; */
 
+/**
+ * @brief Converts hue_light_data structure into JSON for HTTP request
+ *
+ * @param[out] json_buffer Buffer to store output string, custom type to enforce buffer size
+ * @param[in] hue_data Hue API JSON tags as data structure
+ *
+ * @return ESP Error code
+ * @retval - @c ESP_OK – Buffer successfully filled with JSON conversion
+ * @retval - @c ESP_ERR_INVALID_ARG – json_buffer or hue_data is NULL
+ * @retval - @c ESP_ERR_INVALID_RESPONSE – Encoding failure during buffer writing
+ * @retval - @c ESP_ERR_INVALID_SIZE – Buffer is too small for JSON output
+ *
+ * @note This function will clip values out of range for Hue's API
+ */
 esp_err_t hue_light_data_to_json(hue_json_buffer_t* json_buffer, hue_light_data_t* hue_data);
+
+/**
+ * @brief Converts hue_grouped_light_data structure into JSON for HTTP request
+ *
+ * @param[out] json_buffer Buffer to store output string, custom type to enforce buffer size
+ * @param[in] hue_data Hue API JSON tags as data structure
+ *
+ * @return ESP Error code
+ * @retval - @c ESP_OK – Buffer successfully filled with JSON conversion
+ * @retval - @c ESP_ERR_INVALID_ARG – json_buffer or hue_data is NULL
+ * @retval - @c ESP_ERR_INVALID_RESPONSE – Encoding failure during buffer writing
+ * @retval - @c ESP_ERR_INVALID_SIZE – Buffer is too small for JSON output
+ *
+ * @note This function will clip values out of range for Hue's API
+ */
 esp_err_t hue_grouped_light_data_to_json(hue_json_buffer_t* json_buffer, hue_grouped_light_data_t* hue_data);
+
+/**
+ * @brief Converts hue_smart_scene_data structure into JSON for HTTP request
+ *
+ * @param[out] json_buffer Buffer to store output string, custom type to enforce buffer size
+ * @param[in] hue_data Hue API JSON tags as data structure
+ *
+ * @return ESP Error code
+ * @retval - @c ESP_OK – Buffer successfully filled with JSON conversion
+ * @retval - @c ESP_ERR_INVALID_ARG – json_buffer or hue_data is NULL
+ * @retval - @c ESP_ERR_INVALID_RESPONSE – Encoding failure during buffer writing
+ * @retval - @c ESP_ERR_INVALID_SIZE – Buffer is too small for JSON output
+ */
 esp_err_t hue_smart_scene_data_to_json(hue_json_buffer_t* json_buffer, hue_smart_scene_data_t* hue_data);
 
 #ifdef __cplusplus
