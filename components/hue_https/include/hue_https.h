@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+#define HUE_REQUEST_BUFFER_SIZE 512
+
 /**
  * @brief Philips Hue bridge information and application key for requests
  *

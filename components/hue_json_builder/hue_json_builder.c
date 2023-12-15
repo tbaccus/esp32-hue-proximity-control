@@ -200,5 +200,5 @@ esp_err_t hue_smart_scene_data_to_json(hue_json_buffer_t* json_buffer, hue_smart
 
     /* Prints "recall" tag and returns success/failure code */
     return hue_json_sprintf_and_check(json_buffer, "{\"recall\":{\"action\":%s}}",
-                                      hue_data->deactivate ? "deactivate" : "activate");
+                                      hue_data->deactivate ? "\"deactivate\"" : "\"activate\"");
 }
