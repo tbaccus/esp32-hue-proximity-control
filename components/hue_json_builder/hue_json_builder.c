@@ -85,7 +85,7 @@ static esp_err_t hue_json_sprintf_and_check(hue_json_buffer_t* json_buffer, cons
  *
  * @return ESP Error code
  * @retval - @c ESP_OK – Buffer successfully filled with JSON conversion
- * @retval - @c ESP_ERR_INVALID_ARG – json_buffer or hue_data is NULL
+ * @retval - @c ESP_ERR_INVALID_ARG – json_buffer, hue_data, or their internal buffers are NULL
  * @retval - @c ESP_ERR_INVALID_RESPONSE – Encoding failure during buffer writing
  * @retval - @c ESP_ERR_INVALID_SIZE – Buffer is too small for JSON output
  *
@@ -94,7 +94,14 @@ static esp_err_t hue_json_sprintf_and_check(hue_json_buffer_t* json_buffer, cons
 esp_err_t hue_light_data_to_json(hue_json_buffer_t* json_buffer, hue_light_data_t* hue_data) {
     if (HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
     if (HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, json_buffer->resource_id)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, json_buffer->resource_type)) return ESP_ERR_INVALID_ARG;
     if (HUE_NULL_CHECK(tag, hue_data)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, hue_data->resource_id)) return ESP_ERR_INVALID_ARG;
+
+    /* Pass resource type and ID to json_buffer */
+    strcpy(json_buffer->resource_type, "light");
+    strcpy(json_buffer->resource_id, hue_data->resource_id);
 
     esp_err_t ret = ESP_OK;                             /* Error code variable for print error checking */
     memset(json_buffer->buff, 0, HUE_JSON_BUFFER_SIZE); /* Clear output buffer, as printing function appends */
@@ -168,7 +175,7 @@ esp_err_t hue_light_data_to_json(hue_json_buffer_t* json_buffer, hue_light_data_
  *
  * @return ESP Error code
  * @retval - @c ESP_OK – Buffer successfully filled with JSON conversion
- * @retval - @c ESP_ERR_INVALID_ARG – json_buffer or hue_data is NULL
+ * @retval - @c ESP_ERR_INVALID_ARG – json_buffer, hue_data, or their internal buffers are NULL
  * @retval - @c ESP_ERR_INVALID_RESPONSE – Encoding failure during buffer writing
  * @retval - @c ESP_ERR_INVALID_SIZE – Buffer is too small for JSON output
  *
@@ -176,7 +183,12 @@ esp_err_t hue_light_data_to_json(hue_json_buffer_t* json_buffer, hue_light_data_
  */
 esp_err_t hue_grouped_light_data_to_json(hue_json_buffer_t* json_buffer, hue_grouped_light_data_t* hue_data) {
     /* Grouped lights and light resources currently use the same tags, so no need for separate function */
-    return hue_light_data_to_json(json_buffer, hue_data);
+    esp_err_t err = hue_light_data_to_json(json_buffer, hue_data);
+
+    /* Pass resource type and ID to json_buffer */
+    strcpy(json_buffer->resource_type, "grouped_light");
+    strcpy(json_buffer->resource_id, hue_data->resource_id);
+    return err;
 } 
 
 /**
@@ -187,14 +199,20 @@ esp_err_t hue_grouped_light_data_to_json(hue_json_buffer_t* json_buffer, hue_gro
  *
  * @return ESP Error code
  * @retval - @c ESP_OK – Buffer successfully filled with JSON conversion
- * @retval - @c ESP_ERR_INVALID_ARG – json_buffer or hue_data is NULL
+ * @retval - @c ESP_ERR_INVALID_ARG – json_buffer, hue_data, or their internal buffers are NULL
  * @retval - @c ESP_ERR_INVALID_RESPONSE – Encoding failure during buffer writing
  * @retval - @c ESP_ERR_INVALID_SIZE – Buffer is too small for JSON output
  */
 esp_err_t hue_smart_scene_data_to_json(hue_json_buffer_t* json_buffer, hue_smart_scene_data_t* hue_data) {
     if (HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
     if (HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, json_buffer->resource_id)) return ESP_ERR_INVALID_ARG;
     if (HUE_NULL_CHECK(tag, hue_data)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, hue_data->resource_id)) return ESP_ERR_INVALID_ARG;
+    
+    /* Pass resource type and ID to json_buffer */
+    strcpy(json_buffer->resource_type, "smart_scene");
+    strcpy(json_buffer->resource_id, hue_data->resource_id);
 
     memset(json_buffer->buff, 0, HUE_JSON_BUFFER_SIZE); /* Clear output buffer, as printing function appends */
 

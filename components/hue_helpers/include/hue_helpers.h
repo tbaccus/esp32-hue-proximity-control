@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 #define HUE_BOOL_STR(x) ((x) ? "true" : "false")
-#define HUE_NULL_CHECK(tag, x) (x) == NULL){ESP_LOGE(tag, "%s is NULL", #x);}if((x) == NULL
+#define HUE_NULL_CHECK(tag, x) unlikely((x) == NULL)){ESP_LOGE(tag, "%s is NULL", #x);}if(unlikely((x) == NULL)
 
 #ifdef __cplusplus
 }
