@@ -91,16 +91,23 @@ menu "Philips Hue Proximity Control Settings"
                 Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire
                 application key
 
-        config HUE_LIGHTS_ON_PATH
-            string "Philips Hue path to device or group to turn on"
-            default "/smart_scene/[smart scene id]"
+        config HUE_LIGHT_ID
+            string "Philips Hue light resource ID to use"
+            default "[light id]"
             help
                 Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire
                 path and ID
 
-        config HUE_LIGHTS_OFF_PATH
-            string "Philips Hue path to device or group to turn off"
-            default "/grouped_light/[light group id]"
+        config HUE_GROUPED_LIGHT_ID
+            string "Philips Hue grouped light resource ID to use"
+            default "[grouped light id]"
+            help
+                Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire
+                path and ID
+
+        config HUE_SMART_SCENE_ID
+            string "Philips Hue smart scene resource ID to use"
+            default "[smart scene id]"
             help
                 Follow https://developers.meethue.com/develop/hue-api-v2/getting-started to acquire
                 path and ID
