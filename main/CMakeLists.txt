@@ -1,2 +1,2 @@
 idf_component_register(SRCS "main.c"
-                    REQUIRES driver nvs_flash esp_phy wifi_connect hue_test_app)
+                    REQUIRES freertos driver nvs_flash esp_phy esp_common wifi_connect hue_json_builder hue_https)
