@@ -1,7 +1,9 @@
 #include "esp_http_client.h"
 #include "esp_tls.h"
+#include "esp_log.h"
 
 #include "hue_https.h"
+#include "hue_helpers.h"
 
 static const char* tag = "hue_https";
 
@@ -37,9 +39,9 @@ static esp_err_t hue_https_request(hue_config_t* hue_config, hue_json_buffer_t* 
 
 /**
  * @brief Event handler for HTTP session, as defined by esp_http_client
- * 
+ *
  * @param[in] evt Event pointer
- * 
+ *
  * @return ESP Error code, only returns ESP_OK, more research needed as to the purpose of this return
  */
 static esp_err_t hue_https_event_handler(esp_http_client_event_t* evt);
@@ -59,8 +61,6 @@ static const char* http_event_id_to_str(esp_http_client_event_id_t id) {
             return "HTTP_EVENT_ON_CONNECTED";
         case HTTP_EVENT_HEADERS_SENT:
             return "HTTP_EVENT_HEADERS_SENT";
-        case HTTP_EVENT_HEADER_SENT:
-            return "HTTP_EVENT_HEADER_SENT";
         case HTTP_EVENT_ON_HEADER:
             return "HTTP_EVENT_ON_HEADER";
         case HTTP_EVENT_ON_DATA:
@@ -100,9 +100,11 @@ static esp_err_t hue_https_request(hue_config_t* hue_config, hue_json_buffer_t* 
 
     /* Create URL for bridge resource using set IP and resource information */
     char url_str[HUE_URL_BUFFER_SIZE];
-    int err = snprintf(url_str, HUE_URL_BUFFER_SIZE, "https://%d.%d.%d.%d" HUE_RESOURCE_PATH "%s/%s",
-                       hue_config->bridge_ip[0], hue_config->bridge_ip[1], hue_config->bridge_ip[2],
-                       hue_config->bridge_ip[3], json_buffer->resource_type, json_buffer->resource_id);
+    esp_err_t err = snprintf(url_str, HUE_URL_BUFFER_SIZE, "https://%d.%d.%d.%d" HUE_RESOURCE_PATH "%s/%s",
+                             hue_config->bridge_ip[0], hue_config->bridge_ip[1], hue_config->bridge_ip[2],
+                             hue_config->bridge_ip[3], json_buffer->resource_type, json_buffer->resource_id);
+
+    ESP_LOGD(tag, "Generated URL: [%s]", url_str);
 
     /* Verify that URL has been created before moving on */
     if (err <= 0) {
@@ -122,94 +124,99 @@ static esp_err_t hue_https_request(hue_config_t* hue_config, hue_json_buffer_t* 
                                        .event_handler = hue_https_event_handler,    /* Event handler function */
                                        .timeout_ms = 5000,                          /* Halved to speed up on fail */
                                        .method = HTTP_METHOD_PUT};
-    esp_http_client_handle_t client = esp_http_client_init(&config);
+    esp_http_client_handle_t client = NULL; /* Declare variable for retry handling */
 
-    if (!client) {
-        ESP_LOGE(tag, "Client handle failed to be created");
-        return ESP_ERR_INVALID_RESPONSE;
-    }
-
-    /* Set headers used by Hue API */
-    esp_http_client_set_header(client, "hue-application-key", hue_config->application_key);
-    esp_http_client_set_header(client, "Content-Type", "application/json");
-
-    /* Add generated actions to request */
-    esp_http_client_set_post_field(client, json_buffer->buff, strlen(json_buffer->buff));
-
-    esp_err_t err = ESP_FAIL; /* For request error checking and retrying */
-    uint8_t attempt_num = 0;  /* Counter for attempts for retry_attempts configuration */
+    err = ESP_FAIL;          /* For request error checking and retrying */
+    uint8_t attempt_num = 0; /* Counter for attempts for retry_attempts configuration */
 
     /* Retry until request successfully delivers or retry_attempts configuration is reached */
     while (attempt_num <= hue_config->retry_attempts) {
         ESP_LOGD(tag, "Request attempt #%d", attempt_num + 1);
 
-        /* If request delivered, check status code and change error code to ESP_ERR_INVALID_RESPONSE if not 200 OK */
+        /* Determined retry handling works best when completely destroying connection on failure */
+        client = esp_http_client_init(&config);
+
+        if (!client) {
+            ESP_LOGE(tag, "Client handle failed to be created");
+            return ESP_ERR_INVALID_RESPONSE;
+        }
+
+        /* Set headers used by Hue API */
+        esp_http_client_set_header(client, "hue-application-key", hue_config->application_key);
+        esp_http_client_set_header(client, "Content-Type", "application/json");
+
+        /* Add generated actions to request */
+        esp_http_client_set_post_field(client, json_buffer->buff, strlen(json_buffer->buff));
+
         if ((err = esp_http_client_perform(client)) == ESP_OK) {
+            /* If response status code is not 200 OK, log actual status and set for return ESP_ERR_INVALID_RESPONSE */
             if (esp_http_client_get_status_code(client) != HttpStatus_Ok) {
                 ESP_LOGE(tag, "HTTP response status not 200 OK, recieved %d", esp_http_client_get_status_code(client));
                 ESP_LOGD(tag, "HTTP response:\n\t%s", request_buffer);
                 err = ESP_ERR_INVALID_RESPONSE;
             }
-            break; /* Exit loop since request delivered successfully */
+
+            /* Clean up connection and return ESP_OK or ESP_ERR_INVALID_RESPONSE */
+            esp_http_client_cleanup(client); 
+            return err;
         }
+
+        /* Clean up client for retry with less lingering errors */
+        esp_http_client_cleanup(client);
 
         /* Tracking for number of attempts */
         attempt_num++;
         ESP_LOGD(tag, "Error performing HTTP request on attempt #%d: %s", attempt_num, esp_err_to_name(err));
-        err = ESP_FAIL;
 
         /* Wait 1 second before retrying HTTP request */
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
-    if (err == ESP_FAIL) ESP_LOGE(tag, "HTTPS request failed after %d attempts", attempt_num);
+    /* Only reached if max number of attempts is reached, report error */
+    ESP_LOGE(tag, "HTTPS request failed after %d attempts", attempt_num);
 
-    esp_http_client_cleanup(client);
-
-    return err;
+    return ESP_FAIL;
 }
 
 /**
  * @brief Event handler for HTTP session, as defined by esp_http_client
- * 
+ *
  * @param[in] evt Event pointer
- * 
+ *
  * @return ESP Error code, only returns ESP_OK, more research needed as to the purpose of this return
  */
 static esp_err_t hue_https_event_handler(esp_http_client_event_t* evt) {
     static size_t chars_output = 0; /* Number of characters output to buffer */
-    static int mbedtls_err = 0;     /* Storage for MbedTLS error code reporting */
-
-    ESP_LOGD(tag, "HTTP Event %s", http_event_id_to_str(evt->event_id)); /* Log event ID for debug */
 
     switch (evt->event_id) {
-        case HTTP_EVENT_DISCONNECTED: /* Connection has been disconnected */
-            chars_output = 0;         /* Reset for allowing buffer to clear and for proper data appending to buffer */
-            /* Pass through to report if an error occurred during execution */
-        case HTTP_EVENT_ERROR: /* Error encountered during execution */
-            esp_err_t err = esp_tls_get_and_clear_last_error((esp_tls_error_handle_t)evt->data, &mbedtls_err, NULL);
-            if (err != ESP_OK) {
-                ESP_LOGE(tag, "Last esp error code: [0x%x] %s", err, esp_err_to_name(err));
-                ESP_LOGE(tag, "Last mbedtls failure: [0x%x]", mbedtls_err);
-            }
-            break;
         case HTTP_EVENT_ON_HEADER: /* Header recieved from server */
-            ESP_LOGD(tag, "\tHeader: %s: %s", evt->header_key, evt->header_value);
+            ESP_LOGD(tag, "HTTP Event HTTP_EVENT_ON_HEADER, %s: %s", evt->header_key, evt->header_value);
             break;
         case HTTP_EVENT_ON_DATA: /* Data recieved from server */
-            ESP_LOGD(tag, "\tData length = %d", evt->data_len);
+            ESP_LOGD(tag, "HTTP Event HTTP_EVENT_ON_DATA\n\tData length = %d\n\t%.*s", evt->data_len, evt->data_len - 2,
+                     (char*)evt->data);
             if (!evt->user_data) return ESP_OK; /* If output buffer doesn't exist, exit */
 
             /* If no data has been output, clear output buffer */
             if (chars_output == 0) memset(evt->user_data, 0, HUE_REQUEST_BUFFER_SIZE);
 
             /* Append output data to buffer, ensuring data cannot overflow the buffer */
-            strncat(evt->user_data, evt->data, MAX(0, (HUE_REQUEST_BUFFER_SIZE - 1 - chars_output)));
-            chars_output = strlen(evt->user_data); /* Update the number of characters output */
+            if ((HUE_REQUEST_BUFFER_SIZE - 1 - chars_output) > 0) {
+                strncat(evt->user_data, evt->data, HUE_REQUEST_BUFFER_SIZE - 1 - chars_output);
+                chars_output = strlen(evt->user_data); /* Update the number of characters output */
+            }
+            break;
+        case HTTP_EVENT_DISCONNECTED: /* Connection has been disconnected */
+            ESP_LOGD(tag, "HTTP Event HTTP_EVENT_DISCONNECTED");
+            chars_output = 0; /* Reset for allowing buffer to clear and for proper data appending to buffer */
             break;
         case HTTP_EVENT_ON_FINISH: /* HTTP session finished */
-            chars_output = 0;      /* Reset for allowing buffer to clear and for proper data appending to buffer */
+            ESP_LOGD(tag, "HTTP Event HTTP_EVENT_ON_FINISH");
+            chars_output = 0; /* Reset for allowing buffer to clear and for proper data appending to buffer */
             break;
+        default:
+            /* Log event ID for debug */
+            ESP_LOGD(tag, "HTTP Event %s", http_event_id_to_str(evt->event_id));
     }
 
     return ESP_OK;
