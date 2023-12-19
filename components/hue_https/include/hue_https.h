@@ -16,7 +16,7 @@ extern "C" {
 #define HUE_RESOURCE_PATH_SIZE 18              /**< Length of HUE_RESOURCE_PATH without null terminator */
 
 /** Size of "https://" + IPV4 address + HUE_RESOURCE_PATH + longest resource type id + resource id length */
-#define HUE_URL_BUFFER_SIZE 8 + 15 + HUE_RESOURCE_PATH_SIZE + HUE_RESOURCE_TYPE_SIZE + HUE_RESOURCE_ID_SIZE
+#define HUE_URL_BUFFER_SIZE 8 + 15 + HUE_RESOURCE_PATH_SIZE + HUE_RESOURCE_TYPE_SIZE + HUE_RESOURCE_ID_SIZE + 1
 
 /**
  * @brief Philips Hue bridge information and application key for requests
