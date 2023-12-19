@@ -74,6 +74,8 @@ static esp_err_t hue_json_sprintf_and_check(hue_json_buffer_t* json_buffer, cons
         return ESP_ERR_INVALID_SIZE;
     }
 
+    ESP_LOGD(tag, "JSON buffer after print: [%s]", json_buffer->buff);
+
     return ESP_OK;
 }
 
@@ -100,8 +102,8 @@ esp_err_t hue_light_data_to_json(hue_json_buffer_t* json_buffer, hue_light_data_
     if (HUE_NULL_CHECK(tag, hue_data->resource_id)) return ESP_ERR_INVALID_ARG;
 
     /* Pass resource type and ID to json_buffer */
-    strcpy(json_buffer->resource_type, "light");
-    strcpy(json_buffer->resource_id, hue_data->resource_id);
+    json_buffer->resource_type = "light";
+    json_buffer->resource_id = hue_data->resource_id;
 
     esp_err_t ret = ESP_OK;                             /* Error code variable for print error checking */
     memset(json_buffer->buff, 0, HUE_JSON_BUFFER_SIZE); /* Clear output buffer, as printing function appends */
@@ -186,8 +188,9 @@ esp_err_t hue_grouped_light_data_to_json(hue_json_buffer_t* json_buffer, hue_gro
     esp_err_t err = hue_light_data_to_json(json_buffer, hue_data);
 
     /* Pass resource type and ID to json_buffer */
-    strcpy(json_buffer->resource_type, "grouped_light");
-    strcpy(json_buffer->resource_id, hue_data->resource_id);
+    json_buffer->resource_type = "grouped_light";
+    json_buffer->resource_id = hue_data->resource_id;
+
     return err;
 } 
 
@@ -211,8 +214,8 @@ esp_err_t hue_smart_scene_data_to_json(hue_json_buffer_t* json_buffer, hue_smart
     if (HUE_NULL_CHECK(tag, hue_data->resource_id)) return ESP_ERR_INVALID_ARG;
     
     /* Pass resource type and ID to json_buffer */
-    strcpy(json_buffer->resource_type, "smart_scene");
-    strcpy(json_buffer->resource_id, hue_data->resource_id);
+    json_buffer->resource_type = "smart_scene";
+    json_buffer->resource_id = hue_data->resource_id;
 
     memset(json_buffer->buff, 0, HUE_JSON_BUFFER_SIZE); /* Clear output buffer, as printing function appends */
 

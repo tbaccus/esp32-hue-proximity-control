@@ -29,9 +29,9 @@ extern "C" {
 
 /** @brief Buffers for JSON string creation for set buffer sizes */
 typedef struct {
-    char resource_type[HUE_RESOURCE_TYPE_SIZE]; /**< Buffer for resource type string */
-    char resource_id[HUE_RESOURCE_ID_SIZE];     /**< Buffer for Hue resource ID */
-    char buff[HUE_JSON_BUFFER_SIZE];            /**< Buffer with set size */
+    const char* resource_type;       /**< Buffer for resource type string */
+    const char* resource_id;         /**< Buffer for Hue resource ID */
+    char buff[HUE_JSON_BUFFER_SIZE]; /**< Buffer with set size */
 } hue_json_buffer_t;
 
 /** @brief Enum for how a value in a hue json structure should be interpreted */
@@ -44,7 +44,7 @@ typedef enum {
 
 /** @brief Settings for Philips Hue light resources */
 typedef struct {
-    char resource_id[HUE_RESOURCE_ID_SIZE]; /**< Hue resource ID */
+    const char* resource_id; /**< Hue resource ID */
     bool off : 1;                           /**< Light off (true) or on (false) */
     hue_action_t brightness_action : 2;     /**< How brightness should be adjusted */
     uint8_t brightness : 7;                 /**< [0-100] Amount brightness should be adjusted by or set to */
@@ -60,14 +60,14 @@ typedef hue_light_data_t hue_grouped_light_data_t;
 
 /** @brief Settings for Philips Hue smart scene resources */
 typedef struct {
-    char resource_id[HUE_RESOURCE_ID_SIZE]; /**< Hue resource ID */
+    const char* resource_id; /**< Hue resource ID */
     bool deactivate : 1;                    /**< Dectivate (true) or activate (false) smart scene */
 } hue_smart_scene_data_t;
 
 // TODO: Implement hue_scene_data_t structure
 /** @brief Settings for Philips Hue scene resources */
 /* typedef struct {
-    char resource_id[HUE_RESOURCE_ID_SIZE];
+    const char* resource_id;
 } hue_scene_data_t; */
 
 /**
