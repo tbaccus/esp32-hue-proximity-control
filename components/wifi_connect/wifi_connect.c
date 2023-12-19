@@ -9,6 +9,7 @@
 #include "esp_err.h"
 #include "esp_netif.h"
 #include "esp_mac.h"
+#include "lwip/ip4_addr.h"
 
 #include "wifi_connect.h"
 #include "hue_helpers.h"
@@ -17,19 +18,6 @@ static const char* tag = "wifi_connect";
 
 /* Event base for simplified WiFi connection events */
 ESP_EVENT_DEFINE_BASE(WIFI_CONNECT_EVENT);
-
-/**
- * @brief Converts IP address string to esp_ip4_addr_t value
- *
- * @param[out] p_output esp_ip4_addr_t for IP to be stored
- * @param[in]  p_ip     IP address as string
- *
- * @return ESP error code
- * @retval - @c ESP_OK – Success
- * @retval - @c ESP_FAIL – Failed to parse input string
- * @retval - @c ESP_ERR_INVALID_ARG – p_output and/or p_ip arguments are NULL
- */
-static esp_err_t strtoip(esp_ip4_addr_t* p_output, const char* p_ip);
 
 /**
  * @brief Converts MAC address string to array
@@ -86,34 +74,6 @@ static void wifi_timer_callback(TimerHandle_t timer_handle);
 static TimerHandle_t timer_handle = NULL;                        /**< WiFi timeout timer handle */
 static esp_event_handler_instance_t wifi_event_handler_instance; /**< WIFI_EVENT handler instance */
 static esp_event_handler_instance_t ip_event_handler_instance;   /**< IP_EVENT handler instance */
-
-/**
- * @brief Converts IP address string to esp_ip4_addr_t value
- *
- * @param[out] p_output esp_ip4_addr_t for IP to be stored
- * @param[in]  p_ip     IP address as string
- *
- * @return ESP error code
- * @retval - @c ESP_OK – Success
- * @retval - @c ESP_FAIL – Failed to parse input string
- * @retval - @c ESP_ERR_INVALID_ARG – p_output and/or p_ip arguments are NULL
- */
-static esp_err_t strtoip(esp_ip4_addr_t* p_output, const char* p_ip) {
-    /* Validate input pointers are not NULL */
-    if (HUE_NULL_CHECK(tag, p_output)) return ESP_ERR_INVALID_ARG;
-    if (HUE_NULL_CHECK(tag, p_ip)) return ESP_ERR_INVALID_ARG;
-
-    /* Using uint32_t output as uint8_t array */
-    uint8_t* p_tmp = (uint8_t*)(p_output->addr);
-
-    /* Parse IP address string into output with uint8_t array casting */
-    if (4 == sscanf(p_ip, "%3hhu.%3hhu.%3hhu.%3hhu", &p_tmp[0], &p_tmp[1], &p_tmp[2], &p_tmp[3])) {
-        ESP_LOGD(tag, "strtoip returned: " IPSTR, IP2STR(p_output));
-        return ESP_OK;
-    } else { /* Fail if sscanf did not recieve string in correct format */
-        return ESP_FAIL;
-    }
-}
 
 /**
  * @brief Converts MAC address string to array
@@ -237,9 +197,9 @@ static void set_static_ip(esp_netif_t* sta_netif, wifi_connect_config_t* wifi_co
     esp_netif_dhcpc_stop(sta_netif);                      /* Stops DHCP client if running */
 
     /* Set IP info from WiFi Connect config */
-    ESP_ERROR_CHECK(strtoip(&(info.ip), wifi_connect_config->advanced_configs.ip_str));
-    ESP_ERROR_CHECK(strtoip(&(info.gw), wifi_connect_config->advanced_configs.gateway_str));
-    ESP_ERROR_CHECK(strtoip(&(info.netmask), wifi_connect_config->advanced_configs.netmask_str));
+    info.ip.addr = ipaddr_addr(wifi_connect_config->advanced_configs.ip_str);
+    info.gw.addr = ipaddr_addr(wifi_connect_config->advanced_configs.gateway_str);
+    info.netmask.addr = ipaddr_addr(wifi_connect_config->advanced_configs.netmask_str);
     esp_netif_set_ip_info(sta_netif, &info);
 }
 
