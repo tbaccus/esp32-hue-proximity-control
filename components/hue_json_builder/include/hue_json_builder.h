@@ -10,10 +10,8 @@ extern "C" {
 
 #define HUE_JSON_BUFFER_SIZE 256 /**< Maximum number of characters for JSON buffer */
 
-#define HUE_RESOURCE_ID_FORMAT "01234567-89ab-cdef-fedc-ba9876543210" /**< Format of resource ID value */
-#define HUE_RESOURCE_ID_SIZE 37                                       /**< Derived from HUE_RESOURCE_ID_FORMAT */
-
 #define HUE_RESOURCE_TYPE_SIZE 14 /**< Length of "grouped_light/", the longest supported resource identifier */
+#define HUE_RESOURCE_TYPE_MIN 6   /**< Length of "light/", the shortest supported resource identifier */
 
 /* Brightness setting bounds */
 #define HUE_MIN_B_SET 1   /**< Minimum value for brightness setting */
