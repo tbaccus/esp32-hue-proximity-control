@@ -1,3 +1,11 @@
+/**
+ * @file hue_json_builder.c
+ * @author Tanner Baccus
+ * @date 09 December 2023
+ * @brief Implementation for all functions related to the generation of HTTP request JSON bodies from Hue data
+ * structures
+ */
+
 #include <string.h>
 #include <stdarg.h>
 
@@ -15,6 +23,10 @@ static const char* tag = "hue_json_builder";
  *                   dimming:{brightness: int[1-100]}}
  */
 
+/*====================================================================================================================*/
+/*========================================== Private Function Declarations ===========================================*/
+/*====================================================================================================================*/
+
 /**
  * @brief Clamps value to inclusive range and sends warning
  *
@@ -24,17 +36,7 @@ static const char* tag = "hue_json_builder";
  *
  * @return Clamped value
  */
-static uint16_t hue_clamp(uint16_t value, uint16_t minimum, uint16_t maximum) {
-    if (value > maximum) {
-        ESP_LOGW(tag, "%d too large, clamped to %d", value, maximum);
-        return maximum;
-    }
-    if (value < minimum) {
-        ESP_LOGW(tag, "%d too small, clamped to %d", value, minimum);
-        return minimum;
-    }
-    return value;
-}
+static uint16_t hue_clamp(uint16_t value, uint16_t minimum, uint16_t maximum);
 
 /**
  * @brief Append printf formatted string to JSON buffer and verify its success
@@ -49,50 +51,12 @@ static uint16_t hue_clamp(uint16_t value, uint16_t minimum, uint16_t maximum) {
  * @retval - @c ESP_ERR_INVALID_RESPONSE – snprintf returned encoding failure
  * @retval - @c ESP_ERR_INVALID_SIZE – Buffer string too short to append to
  */
-static esp_err_t hue_json_sprintf_and_check(hue_json_buffer_t* json_buffer, const char* format, ...) {
-    if (HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
-    if (HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
+static esp_err_t hue_json_sprintf_and_check(hue_json_buffer_t* json_buffer, const char* format, ...);
 
-    /* Position used for appending to buffer */
-    int buff_pos = strlen(json_buffer->buff);
+/*====================================================================================================================*/
+/*=========================================== Public Function Definitions ============================================*/
+/*====================================================================================================================*/
 
-    /* Maximum number of characters allowed to append to prevent buffer overflow */
-    const uint16_t chars_left = HUE_JSON_BUFFER_SIZE - buff_pos;
-
-    /* Pass format and arguments into vsnprintf */
-    va_list args;
-    va_start(args, format);
-    buff_pos = vsnprintf(json_buffer->buff + buff_pos, chars_left, format, args);
-    va_end(args);
-
-    if (buff_pos < 0) {
-        ESP_LOGE(tag, "JSON string printing encoding failure");
-        return ESP_ERR_INVALID_RESPONSE;
-    }
-    if (buff_pos >= chars_left) {
-        ESP_LOGE(tag, "JSON string ran out of characters to print to");
-        return ESP_ERR_INVALID_SIZE;
-    }
-
-    ESP_LOGD(tag, "JSON buffer after print: [%s]", json_buffer->buff);
-
-    return ESP_OK;
-}
-
-/**
- * @brief Converts hue_light_data structure into JSON for HTTP request
- *
- * @param[out] json_buffer Buffer to store output string, custom type to enforce buffer size
- * @param[in] hue_data Hue API JSON tags as data structure
- *
- * @return ESP Error code
- * @retval - @c ESP_OK – Buffer successfully filled with JSON conversion
- * @retval - @c ESP_ERR_INVALID_ARG – json_buffer, hue_data, or their internal buffers are NULL
- * @retval - @c ESP_ERR_INVALID_RESPONSE – Encoding failure during buffer writing
- * @retval - @c ESP_ERR_INVALID_SIZE – Buffer is too small for JSON output
- *
- * @note This function will clip values out of range for Hue's API
- */
 esp_err_t hue_light_data_to_json(hue_json_buffer_t* json_buffer, hue_light_data_t* hue_data) {
     if (HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
     if (HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
@@ -169,20 +133,6 @@ esp_err_t hue_light_data_to_json(hue_json_buffer_t* json_buffer, hue_light_data_
     return hue_json_sprintf_and_check(json_buffer, "}");
 }
 
-/**
- * @brief Converts hue_grouped_light_data structure into JSON for HTTP request
- *
- * @param[out] json_buffer Buffer to store output string, custom type to enforce buffer size
- * @param[in] hue_data Hue API JSON tags as data structure
- *
- * @return ESP Error code
- * @retval - @c ESP_OK – Buffer successfully filled with JSON conversion
- * @retval - @c ESP_ERR_INVALID_ARG – json_buffer, hue_data, or their internal buffers are NULL
- * @retval - @c ESP_ERR_INVALID_RESPONSE – Encoding failure during buffer writing
- * @retval - @c ESP_ERR_INVALID_SIZE – Buffer is too small for JSON output
- *
- * @note This function will clip values out of range for Hue's API
- */
 esp_err_t hue_grouped_light_data_to_json(hue_json_buffer_t* json_buffer, hue_grouped_light_data_t* hue_data) {
     /* Grouped lights and light resources currently use the same tags, so no need for separate function */
     esp_err_t err = hue_light_data_to_json(json_buffer, hue_data);
@@ -192,27 +142,15 @@ esp_err_t hue_grouped_light_data_to_json(hue_json_buffer_t* json_buffer, hue_gro
     json_buffer->resource_id = hue_data->resource_id;
 
     return err;
-} 
+}
 
-/**
- * @brief Converts hue_smart_scene_data structure into JSON for HTTP request
- *
- * @param[out] json_buffer Buffer to store output string, custom type to enforce buffer size
- * @param[in] hue_data Hue API JSON tags as data structure
- *
- * @return ESP Error code
- * @retval - @c ESP_OK – Buffer successfully filled with JSON conversion
- * @retval - @c ESP_ERR_INVALID_ARG – json_buffer, hue_data, or their internal buffers are NULL
- * @retval - @c ESP_ERR_INVALID_RESPONSE – Encoding failure during buffer writing
- * @retval - @c ESP_ERR_INVALID_SIZE – Buffer is too small for JSON output
- */
 esp_err_t hue_smart_scene_data_to_json(hue_json_buffer_t* json_buffer, hue_smart_scene_data_t* hue_data) {
     if (HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
     if (HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
     if (HUE_NULL_CHECK(tag, json_buffer->resource_id)) return ESP_ERR_INVALID_ARG;
     if (HUE_NULL_CHECK(tag, hue_data)) return ESP_ERR_INVALID_ARG;
     if (HUE_NULL_CHECK(tag, hue_data->resource_id)) return ESP_ERR_INVALID_ARG;
-    
+
     /* Pass resource type and ID to json_buffer */
     json_buffer->resource_type = "smart_scene";
     json_buffer->resource_id = hue_data->resource_id;
@@ -222,4 +160,50 @@ esp_err_t hue_smart_scene_data_to_json(hue_json_buffer_t* json_buffer, hue_smart
     /* Prints "recall" tag and returns success/failure code */
     return hue_json_sprintf_and_check(json_buffer, "{\"recall\":{\"action\":%s}}",
                                       hue_data->deactivate ? "\"deactivate\"" : "\"activate\"");
+}
+
+/*====================================================================================================================*/
+/*=========================================== Private Function Definitions ===========================================*/
+/*====================================================================================================================*/
+
+static uint16_t hue_clamp(uint16_t value, uint16_t minimum, uint16_t maximum) {
+    if (value > maximum) {
+        ESP_LOGW(tag, "%d too large, clamped to %d", value, maximum);
+        return maximum;
+    }
+    if (value < minimum) {
+        ESP_LOGW(tag, "%d too small, clamped to %d", value, minimum);
+        return minimum;
+    }
+    return value;
+}
+
+static esp_err_t hue_json_sprintf_and_check(hue_json_buffer_t* json_buffer, const char* format, ...) {
+    if (HUE_NULL_CHECK(tag, json_buffer)) return ESP_ERR_INVALID_ARG;
+    if (HUE_NULL_CHECK(tag, json_buffer->buff)) return ESP_ERR_INVALID_ARG;
+
+    /* Position used for appending to buffer */
+    int buff_pos = strlen(json_buffer->buff);
+
+    /* Maximum number of characters allowed to append to prevent buffer overflow */
+    const uint16_t chars_left = HUE_JSON_BUFFER_SIZE - buff_pos;
+
+    /* Pass format and arguments into vsnprintf */
+    va_list args;
+    va_start(args, format);
+    buff_pos = vsnprintf(json_buffer->buff + buff_pos, chars_left, format, args);
+    va_end(args);
+
+    if (buff_pos < 0) {
+        ESP_LOGE(tag, "JSON string printing encoding failure");
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+    if (buff_pos >= chars_left) {
+        ESP_LOGE(tag, "JSON string ran out of characters to print to");
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    ESP_LOGD(tag, "JSON buffer after print: [%s]", json_buffer->buff);
+
+    return ESP_OK;
 }

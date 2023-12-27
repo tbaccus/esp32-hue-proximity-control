@@ -1,3 +1,11 @@
+/**
+ * @file wifi_connect.c
+ * @author Tanner Baccus
+ * @date 06 December 2023
+ * @brief Implementation of all functions relating to the establishment of a WiFi connection based on simplified wrapper
+ * functions and structures
+ */
+
 #include <string.h>
 
 #include "freertos/FreeRTOS.h"
@@ -18,6 +26,18 @@ static const char* tag = "wifi_connect";
 
 /* Event base for simplified WiFi connection events */
 ESP_EVENT_DEFINE_BASE(WIFI_CONNECT_EVENT);
+
+/*====================================================================================================================*/
+/*========================================== Private Structure Definitions ===========================================*/
+/*====================================================================================================================*/
+
+static TimerHandle_t timer_handle = NULL;                        /**< WiFi timeout timer handle */
+static esp_event_handler_instance_t wifi_event_handler_instance; /**< WIFI_EVENT handler instance */
+static esp_event_handler_instance_t ip_event_handler_instance;   /**< IP_EVENT handler instance */
+
+/*====================================================================================================================*/
+/*========================================== Private Function Declarations ===========================================*/
+/*====================================================================================================================*/
 
 /**
  * @brief Converts MAC address string to array
@@ -43,6 +63,21 @@ static esp_err_t strtomac(uint8_t* a_output, const char* p_mac);
 static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
 /**
+ * @brief Callback function for WiFi timeout timer to restart esp on timeout
+ *
+ * @param timer_handle Handle for timer calling the function
+ */
+static void wifi_timer_callback(TimerHandle_t timer_handle);
+
+/**
+ * @brief Sets IP for station to request from DHCP server based on ESP-IDF config
+ *
+ * @param[in,out] sta_netif Pointer to netif instance for station
+ * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
+ */
+static void set_static_ip(esp_netif_t* sta_netif, wifi_connect_config_t* wifi_connect_config);
+
+/**
  * @brief Run WiFi/LwIP initialization phase of WiFi connection
  *
  * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
@@ -56,36 +91,81 @@ static void wifi_phase_init(wifi_connect_config_t* wifi_connect_config);
  */
 static void wifi_phase_config(wifi_connect_config_t* wifi_connect_config);
 
-/**
- * @brief Sets IP for station to request from DHCP server based on ESP-IDF config
- *
- * @param[in,out] sta_netif Pointer to netif instance for station
- * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
- */
-static void set_static_ip(esp_netif_t* sta_netif, wifi_connect_config_t* wifi_connect_config);
+/*====================================================================================================================*/
+/*=========================================== Public Function Definitions ============================================*/
+/*====================================================================================================================*/
 
-/**
- * @brief Callback function for WiFi timeout timer to restart esp on timeout
- *
- * @param timer_handle Handle for timer calling the function
- */
-static void wifi_timer_callback(TimerHandle_t timer_handle);
+void wifi_disconnect() {
+    ESP_LOGI(tag, "Disconnecting WiFi...");
+    /* Unregister event handler to prevent reconnect attempts during disconnect process */
+    if (wifi_event_handler_instance) {
+        ESP_LOGD(tag, "Unregistering WiFi event handler instance...");
+        esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler_instance);
+    }
 
-static TimerHandle_t timer_handle = NULL;                        /**< WiFi timeout timer handle */
-static esp_event_handler_instance_t wifi_event_handler_instance; /**< WIFI_EVENT handler instance */
-static esp_event_handler_instance_t ip_event_handler_instance;   /**< IP_EVENT handler instance */
+    if (ip_event_handler_instance) {
+        ESP_LOGD(tag, "Unregistering IP event handler instance...");
+        esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &ip_event_handler_instance);
+    }
 
-/**
- * @brief Converts MAC address string to array
- *
- * @param[out] p_output uint8_t array with 6 elements for MAC address to be stored
- * @param[in]  p_mac    MAC address as string
- *
- * @return ESP error code
- * @retval - @c ESP_OK – Success
- * @retval - @c ESP_FAIL – Failed to parse input string
- * @retval - @c ESP_ERR_INVALID_ARG – p_output and/or p_mac arguments are NULL
- */
+    /* If enabled, delete WiFi timeout timer task */
+    if (timer_handle) {
+        ESP_LOGD(tag, "Deleting WiFi timer...");
+        xTimerDelete(timer_handle, 0);
+        timer_handle = NULL;
+    }
+
+    /* Post WiFi disconnected event for wifi_connect event handling */
+    ESP_LOGD(tag, "Posting WIFI_CONNECT_EVENT_DISCONNECTED...");
+    wifi_err_reason_t reason = WIFI_REASON_ASSOC_LEAVE; /* WiFi reason indicating esp_wifi_disconnect() call */
+    ESP_ERROR_CHECK(
+        esp_event_post(WIFI_CONNECT_EVENT, WIFI_CONNECT_EVENT_DISCONNECTED, &reason, sizeof(reason), portMAX_DELAY));
+
+    /* No error handling needed for WiFi disconnect and deinitialization */
+    ESP_LOGD(tag, "Calling esp_wifi_disconnect()...");
+    esp_wifi_disconnect();
+
+    ESP_LOGD(tag, "Calling esp_wifi_stop()...");
+    esp_wifi_stop();
+
+    ESP_LOGD(tag, "Calling esp_wifi_deinit()...");
+    esp_wifi_deinit();
+
+    ESP_LOGI(tag, "WiFi disconnected.");
+}
+
+esp_err_t wifi_connect(wifi_connect_config_t* wifi_config) {
+    if (HUE_NULL_CHECK(tag, wifi_config)) return ESP_ERR_INVALID_ARG;
+    ESP_LOGI(tag, "WiFi connection process started");
+
+    wifi_connect_advanced_config_t* adv_config = &(wifi_config->advanced_configs);
+
+    /* If enabled, setup WiFi timeout timer for restarting esp if timeout period has passed during connection */
+    if (adv_config->timeout_set && (adv_config->timeout_seconds >= 1) && (adv_config->timeout_seconds <= 10)) {
+        timer_handle = xTimerCreate("WiFi timer", pdMS_TO_TICKS(adv_config->timeout_seconds * 1000), pdFALSE, (void*)0,
+                                    wifi_timer_callback);
+    }
+
+    ESP_LOGD(tag, "Starting WiFi Phase 1: Initialization");
+    wifi_phase_init(wifi_config); /* Phase 1 of WiFi connection */
+    ESP_LOGD(tag, "Starting WiFi Phase 2: Configuration");
+    wifi_phase_config(wifi_config); /* Phase 2 of WiFi connection */
+    ESP_LOGD(tag, "Starting WiFi Phase 3: Start");
+    ESP_ERROR_CHECK(esp_wifi_start()); /* Phase 3 of WiFi connection */
+    /* Phase 3 posts WIFI_EVENT_STA_START to event_handler to begin Phase 4 */
+
+    /* Phase 4 of WiFi connection starts with esp_wifi_connect() call in event_handler */
+    /* Phase 4 posts WiFI_EVENT_STA_CONNECTED to event_handler to begin Phase 5 */
+
+    /* Phase 5 of WiFi connection is IP assignment from DHCP server */
+    /* Phase 5 posts IP_EVENT_STA_GOT_IP to event_handler once IP is assigned */
+    return ESP_OK;
+}
+
+/*====================================================================================================================*/
+/*=========================================== Private Function Definitions ===========================================*/
+/*====================================================================================================================*/
+
 static esp_err_t strtomac(uint8_t* a_output, const char* p_mac) {
     /* Validate input pointers are not NULL */
     if (HUE_NULL_CHECK(tag, a_output)) return ESP_ERR_INVALID_ARG;
@@ -100,14 +180,6 @@ static esp_err_t strtomac(uint8_t* a_output, const char* p_mac) {
     }
 }
 
-/**
- * @brief Event handler for WiFi and IP events
- *
- * @param[in] arg        Arguments given with event handler register
- * @param[in] event_base Base of event being handled
- * @param[in] event_id   ID of event being handled
- * @param[in] event_data Data sent by event loop
- */
 static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
     static bool wifi_connected;
     if (event_base == WIFI_EVENT) { /* WiFi Event handlers */
@@ -174,22 +246,11 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
     }
 }
 
-/**
- * @brief Callback function for WiFi timeout timer to restart esp on timeout
- *
- * @param timer_handle Handle for timer calling the function
- */
 static void wifi_timer_callback(TimerHandle_t timer_handle) {
     ESP_LOGW(tag, "WiFi connection timed out, restarting to refresh connection...");
     esp_restart();
 }
 
-/**
- * @brief Sets IP for station to request from DHCP server based on ESP-IDF config
- *
- * @param[in,out] sta_netif Pointer to netif instance for station
- * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
- */
 static void set_static_ip(esp_netif_t* sta_netif, wifi_connect_config_t* wifi_connect_config) {
     if (HUE_NULL_CHECK(tag, sta_netif)) return;           /* Stop if netif instance does not exist */
     if (HUE_NULL_CHECK(tag, wifi_connect_config)) return; /* Stop if WiFi config instance does not exist */
@@ -203,11 +264,6 @@ static void set_static_ip(esp_netif_t* sta_netif, wifi_connect_config_t* wifi_co
     esp_netif_set_ip_info(sta_netif, &info);
 }
 
-/**
- * @brief Run WiFi/LwIP initialization phase of WiFi connection
- *
- * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
- */
 static void wifi_phase_init(wifi_connect_config_t* wifi_connect_config) {
     if (HUE_NULL_CHECK(tag, wifi_connect_config)) return; /* Stop if WiFi config instance does not exist */
 
@@ -234,11 +290,6 @@ static void wifi_phase_init(wifi_connect_config_t* wifi_connect_config) {
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 }
 
-/**
- * @brief Run configuration phase of WiFi connection
- *
- * @param[in] wifi_connect_config Pointer to WiFi Connect configuration
- */
 static void wifi_phase_config(wifi_connect_config_t* wifi_connect_config) {
     /* WiFi configuration with SSID and Password provided in ESP-IDF config */
     static wifi_config_t wifi_config = {
@@ -260,86 +311,4 @@ static void wifi_phase_config(wifi_connect_config_t* wifi_connect_config) {
 
     /* TODO: Test if actually helps with connection stability */
     // ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
-}
-
-/**
- * @brief Disconnect and deinitialize WiFi
- */
-void wifi_disconnect() {
-    ESP_LOGI(tag, "Disconnecting WiFi...");
-    /* Unregister event handler to prevent reconnect attempts during disconnect process */
-    if (wifi_event_handler_instance) {
-        ESP_LOGD(tag, "Unregistering WiFi event handler instance...");
-        esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler_instance);
-    }
-
-    if (ip_event_handler_instance) {
-        ESP_LOGD(tag, "Unregistering IP event handler instance...");
-        esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &ip_event_handler_instance);
-    }
-
-    /* If enabled, delete WiFi timeout timer task */
-    if (timer_handle) {
-        ESP_LOGD(tag, "Deleting WiFi timer...");
-        xTimerDelete(timer_handle, 0);
-        timer_handle = NULL;
-    }
-
-    /* Post WiFi disconnected event for wifi_connect event handling */
-    ESP_LOGD(tag, "Posting WIFI_CONNECT_EVENT_DISCONNECTED...");
-    wifi_err_reason_t reason = WIFI_REASON_ASSOC_LEAVE; /* WiFi reason indicating esp_wifi_disconnect() call */
-    ESP_ERROR_CHECK(
-        esp_event_post(WIFI_CONNECT_EVENT, WIFI_CONNECT_EVENT_DISCONNECTED, &reason, sizeof(reason), portMAX_DELAY));
-
-    /* No error handling needed for WiFi disconnect and deinitialization */
-    ESP_LOGD(tag, "Calling esp_wifi_disconnect()...");
-    esp_wifi_disconnect();
-
-    ESP_LOGD(tag, "Calling esp_wifi_stop()...");
-    esp_wifi_stop();
-
-    ESP_LOGD(tag, "Calling esp_wifi_deinit()...");
-    esp_wifi_deinit();
-
-    ESP_LOGI(tag, "WiFi disconnected.");
-}
-
-/**
- * @brief Connect to WiFi with settings specified in ESP-IDF configs
- *
- * @param[in] wifi_config Pointer to WiFi configuration settings
- *
- * @return ESP Error code
- * @retval - @c ESP_OK – WiFi connection process successfully started
- * @retval - @c ESP_ERR_INVALID_ARG – Configuration argument is NULL
- *
- * @attention \c WIFI_CONNECT_EVENT events will post to the default event loop for WiFi connection and disconnection and
- *            should be registered with esp_event_handler_instance_register to detect and respond to events
- */
-esp_err_t wifi_connect(wifi_connect_config_t* wifi_config) {
-    if (HUE_NULL_CHECK(tag, wifi_config)) return ESP_ERR_INVALID_ARG;
-    ESP_LOGI(tag, "WiFi connection process started");
-
-    wifi_connect_advanced_config_t* adv_config = &(wifi_config->advanced_configs);
-
-    /* If enabled, setup WiFi timeout timer for restarting esp if timeout period has passed during connection */
-    if (adv_config->timeout_set && (adv_config->timeout_seconds >= 1) && (adv_config->timeout_seconds <= 10)) {
-        timer_handle = xTimerCreate("WiFi timer", pdMS_TO_TICKS(adv_config->timeout_seconds * 1000), pdFALSE, (void*)0,
-                                    wifi_timer_callback);
-    }
-
-    ESP_LOGD(tag, "Starting WiFi Phase 1: Initialization");
-    wifi_phase_init(wifi_config); /* Phase 1 of WiFi connection */
-    ESP_LOGD(tag, "Starting WiFi Phase 2: Configuration");
-    wifi_phase_config(wifi_config); /* Phase 2 of WiFi connection */
-    ESP_LOGD(tag, "Starting WiFi Phase 3: Start");
-    ESP_ERROR_CHECK(esp_wifi_start()); /* Phase 3 of WiFi connection */
-    /* Phase 3 posts WIFI_EVENT_STA_START to event_handler to begin Phase 4 */
-
-    /* Phase 4 of WiFi connection starts with esp_wifi_connect() call in event_handler */
-    /* Phase 4 posts WiFI_EVENT_STA_CONNECTED to event_handler to begin Phase 5 */
-
-    /* Phase 5 of WiFi connection is IP assignment from DHCP server */
-    /* Phase 5 posts IP_EVENT_STA_GOT_IP to event_handler once IP is assigned */
-    return ESP_OK;
 }

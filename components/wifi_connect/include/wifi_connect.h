@@ -1,20 +1,35 @@
+/**
+ * @file wifi_connect.h
+ * @author Tanner Baccus
+ * @date 06 December 2023
+ * @brief Declarations for all public functions for WiFi connection wrappers to simplify connection process
+ */
+
 #ifndef H_WIFI_CONNECT
 #define H_WIFI_CONNECT
-
-#include "esp_event.h"
-#include "esp_err.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include "esp_event.h"
+#include "esp_err.h"
+
+/* Event base for simplified WiFi connection events */
+ESP_EVENT_DECLARE_BASE(WIFI_CONNECT_EVENT);
+
+/*====================================================================================================================*/
+/*===================================================== Defines ======================================================*/
+/*====================================================================================================================*/
 
 /* Modifcation of MAC2STR macro for sscanf */
 #define MAC2STR_PTR(a) &(a)[0], &(a)[1], &(a)[2], &(a)[3], &(a)[4], &(a)[5]
 
 #define MACSTR_PARSE "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx"
 
-/* Event base for simplified WiFi connection events */
-ESP_EVENT_DECLARE_BASE(WIFI_CONNECT_EVENT);
+/*====================================================================================================================*/
+/*=========================================== Public Structure Definitions ===========================================*/
+/*====================================================================================================================*/
 
 /** @brief WiFi connect event declarations */
 typedef enum {
@@ -43,6 +58,10 @@ typedef struct {
     wifi_connect_advanced_config_t advanced_configs;
 } wifi_connect_config_t;
 
+/*====================================================================================================================*/
+/*=========================================== Public Function Declarations ===========================================*/
+/*====================================================================================================================*/
+
 /**
  * @brief Disconnect and deinitialize WiFi
  */
@@ -65,5 +84,4 @@ esp_err_t wifi_connect(wifi_connect_config_t* wifi_config);
 #ifdef __cplusplus
 }
 #endif
-
 #endif /* H_WIFI_CONNECT */

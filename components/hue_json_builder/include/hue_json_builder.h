@@ -1,3 +1,10 @@
+/**
+ * @file hue_json_builder.h
+ * @author Tanner Baccus
+ * @date 09 December 2023
+ * @brief Declaration of all public functions for the generation of HTTP request JSON bodies from Hue data structures
+ */
+
 #ifndef H_HUE_JSON_BUILDER
 #define H_HUE_JSON_BUILDER
 
@@ -7,6 +14,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*====================================================================================================================*/
+/*===================================================== Defines ======================================================*/
+/*====================================================================================================================*/
 
 #define HUE_JSON_BUFFER_SIZE 256 /**< Maximum number of characters for JSON buffer */
 
@@ -24,6 +35,10 @@ extern "C" {
 #define HUE_MAX_CT_SET 500 /**< Maximum value for color temp setting */
 #define HUE_MIN_CT_ADD 0   /**< Minimum value for color temp modifying */
 #define HUE_MAX_CT_ADD 347 /**< Maximum value for color temp modifying */
+
+/*====================================================================================================================*/
+/*=========================================== Public Structure Definitions ===========================================*/
+/*====================================================================================================================*/
 
 /** @brief Buffers for JSON string creation for set buffer sizes */
 typedef struct {
@@ -67,6 +82,10 @@ typedef struct {
 /* typedef struct {
     const char* resource_id;
 } hue_scene_data_t; */
+
+/*====================================================================================================================*/
+/*=========================================== Public Function Declarations ===========================================*/
+/*====================================================================================================================*/
 
 /**
  * @brief Converts hue_light_data structure into JSON for HTTP request
@@ -117,5 +136,4 @@ esp_err_t hue_smart_scene_data_to_json(hue_json_buffer_t* json_buffer, hue_smart
 #ifdef __cplusplus
 }
 #endif
-
 #endif /* H_HUE_JSON_BUILDER */
