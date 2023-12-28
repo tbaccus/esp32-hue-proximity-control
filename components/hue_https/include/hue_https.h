@@ -10,7 +10,6 @@
 
 #include "esp_types.h"
 #include "esp_err.h"
-#include "esp_bit_defs.h"
 
 #include "hue_json_builder.h"
 
@@ -44,6 +43,8 @@ typedef struct hue_https_request_instance* hue_https_request_handle_t; /**< Hand
 /*====================================================================================================================*/
 /*=========================================== Public Function Declarations ===========================================*/
 /*====================================================================================================================*/
+
+/* hue_https_request_instance.c */
 
 /**
  * @brief Create HTTPS request instance using hue light data for actions to perform
@@ -107,6 +108,21 @@ esp_err_t hue_https_create_smart_scene_request(hue_https_request_handle_t* p_req
  * @retval - @c ESP_OK – Request instance successfully destroyed and freed
  */
 esp_err_t hue_https_destroy_request(hue_https_request_handle_t* p_request_handle);
+
+/**
+ * @brief Sends request handle to Hue HTTPS instance to be performed
+ *
+ * @param[in] hue_https_handle Hue HTTPS handle to send request with (from hue_https_create_instance())
+ * @param[in] request_handle Request handle to send (from hue_https_create_[type]_request())
+ * @param[in] force_through If true, the request will abort any currently running request and send the new one,
+ * otherwise the new request will be ignored if a request is currently running
+ * 
+ * @note Will only attempt to acquire mutex for 5 seconds before failing to prevent permanent blocking
+ */
+void hue_https_perform_request(hue_https_handle_t hue_https_handle, hue_https_request_handle_t request_handle,
+                               bool force_through);
+                               
+/* hue_https_instance.c */
 
 /**
  * @brief Creates a Hue HTTPS instance for sending Hue HTTPS requests

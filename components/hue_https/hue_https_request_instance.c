@@ -26,7 +26,7 @@ static const char* tag = "hue_https_request";
  * @retval - @c ESP_OK – Resource ID formatted as expected
  * @retval - @c ESP_FAIL – Resource ID incorrectly formatted
  */
-static esp_err_t check_resource_id(char* resource_id);
+static esp_err_t check_resource_id(const char* resource_id);
 
 /**
  * @brief Frees all request instance resources and sets handle to NULL
@@ -156,11 +156,49 @@ esp_err_t hue_https_create_smart_scene_request(hue_https_request_handle_t* p_req
 /* TODO: destructor */
 esp_err_t hue_https_destroy_request(hue_https_request_handle_t* p_request_handle) { return ESP_ERR_NOT_FINISHED; }
 
+void hue_https_perform_request(hue_https_handle_t hue_https_handle, hue_https_request_handle_t request_handle,
+                               bool force_through) {
+    if (HUE_NULL_CHECK(tag, hue_https_handle)) return;
+    if (HUE_NULL_CHECK(tag, request_handle)) return;
+
+    /* Take mutex to ensure that the Hue HTTPS instance task cannot modify the request handles during */
+    if (xSemaphoreTake(hue_https_handle->request_handle_mutex, pdMS_TO_TICKS(5000))) {
+        /* If there is already a handle in the current position, a request is currently running */
+        if (hue_https_handle->current_request_handle) {
+            if (!force_through) {
+                ESP_LOGW(tag,
+                         "A request is currently running and the force_through argument was not set, new request has "
+                         "been ignored");
+                return;
+            }
+            /* If enabled, sends abort bit to stop currently running request and adds the new request to be next */
+            ESP_LOGD(tag, "A request is currently running, setting next request and aborting current");
+            hue_https_handle->next_request_handle = request_handle;
+            xEventGroupSetBits(hue_https_handle->handle_evt, HUE_HTTPS_EVT_ABORT_BIT);
+        } else { /* No request is currently running */
+            ESP_LOGD(tag, "No request currently running, sending new request through");
+
+            /* Assign new request to the current handle */
+            hue_https_handle->current_request_handle = request_handle;
+            hue_https_handle->next_request_handle = NULL;
+
+            /* Clear the abort bit to ensure the request will not be cancelled erroneously */
+            xEventGroupClearBits(hue_https_handle->handle_evt, HUE_HTTPS_EVT_ABORT_BIT);
+
+            /* Set the trigger bit to initiate the request */
+            xEventGroupSetBits(hue_https_handle->handle_evt, HUE_HTTPS_EVT_TRIGGER_BIT);
+        }
+        xSemaphoreGive(hue_https_handle->request_handle_mutex);
+    } else {
+        ESP_LOGE(tag, "Failed to acquire mutex within 5 seconds, request not sent");
+    }
+}
+
 /*====================================================================================================================*/
 /*=========================================== Private Function Definitions ===========================================*/
 /*====================================================================================================================*/
 
-static esp_err_t check_resource_id(char* resource_id) {
+static esp_err_t check_resource_id(const char* resource_id) {
     if (strlen(resource_id) != HUE_RESOURCE_ID_LENGTH) {
         ESP_LOGE(tag, "Resource ID provided is not the correct length for a resource ID");
         return ESP_FAIL;
