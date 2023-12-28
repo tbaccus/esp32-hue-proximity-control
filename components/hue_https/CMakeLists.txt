@@ -1,4 +1,4 @@
-idf_component_register(SRCS "hue_https_request_instance.c" "hue_https_instance.c" "hue_https.c"
+idf_component_register(SRCS "hue_https_request_instance.c" "hue_https_instance.c"
                     INCLUDE_DIRS "include"
                     PRIV_INCLUDE_DIRS "private_include"
                     EMBED_TXTFILES hue_signify_root_cert.pem
